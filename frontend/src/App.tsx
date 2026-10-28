@@ -1,12 +1,12 @@
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import {
-  Activity, ArrowRight, BadgeAlert, Check, ChevronDown, CircleHelp, CloudSun,
-  Globe2, Leaf, LogOut, MapPin, Menu, Plus, ShieldCheck, Sprout, Upload, X,
+  Activity, ArrowRight, BadgeAlert, BookOpen, Check, ChevronDown, CircleHelp, CloudSun,
+  Globe2, History, Leaf, LogOut, MapPin, Menu, Plus, Settings, ShieldCheck, Sprout, Upload, X,
 } from "lucide-react";
-import { api, Farm, User } from "./api";
+import { api, DiagnosisHistory, Farm, Knowledge, ModelVersion, RiskHistory, User } from "./api";
 
 type Language = "en" | "ta";
-type View = "overview" | "diagnosis" | "risk" | "farms";
+type View = "overview" | "diagnosis" | "risk" | "farms" | "history" | "knowledge" | "settings" | "admin";
 type DiagnosisResult = {
   status: string;
   predicted_class: string;
@@ -149,6 +149,10 @@ export default function App() {
           <NavButton active={view === "diagnosis"} onClick={() => navigate("diagnosis")} icon={<Leaf size={17} />}>{t.diagnosis}</NavButton>
           <NavButton active={view === "risk"} onClick={() => navigate("risk")} icon={<CloudSun size={17} />}>{t.riskNav}</NavButton>
           <NavButton active={view === "farms"} onClick={() => navigate("farms")} icon={<MapPin size={17} />}>{t.farms}</NavButton>
+          <NavButton active={view === "history"} onClick={() => navigate("history")} icon={<History size={17} />}>History</NavButton>
+          <NavButton active={view === "knowledge"} onClick={() => navigate("knowledge")} icon={<BookOpen size={17} />}>Knowledge</NavButton>
+          <NavButton active={view === "settings"} onClick={() => navigate("settings")} icon={<Settings size={17} />}>Settings</NavButton>
+          {user?.role === "admin" && <NavButton active={view === "admin"} onClick={() => navigate("admin")} icon={<ShieldCheck size={17} />}>Admin</NavButton>}
           <div className="sidebar-bottom"><span className="online-dot" /> API connection <span className="offline-label">{t.offline}</span></div>
         </aside>
         <section className="content">
@@ -158,6 +162,10 @@ export default function App() {
           {!loading && user && view === "farms" ? <FarmList farms={farms} t={t} onFarm={() => setFarmOpen(true)} /> : null}
           {!loading && user && view === "diagnosis" ? <Diagnosis farms={farms} t={t} /> : null}
           {!loading && user && view === "risk" ? <RiskAssessment farms={farms} t={t} /> : null}
+          {!loading && user && view === "history" ? <HistoryView t={t} /> : null}
+          {!loading && user && view === "knowledge" ? <KnowledgeView language={language} /> : null}
+          {!loading && user && view === "settings" ? <SettingsView user={user} language={language} onLanguage={changeLanguage} onDeleted={async () => { await signOut(); setView("overview"); }} /> : null}
+          {!loading && user && view === "admin" && user.role === "admin" ? <AdminView /> : null}
           <footer className="footer"><span>{t.source}</span><span>{t.limitation}</span></footer>
         </section>
       </main>
@@ -248,7 +256,7 @@ function Diagnosis({ farms, t }: { farms: Farm[]; t: typeof copy.en }) {
     catch (e) { setError(e instanceof Error ? e.message : t.modelUnavailable); }
     finally { setSubmitting(false); }
   }
-  return <div className="page-enter"><div className="page-heading"><div><span className="eyebrow">IMAGE-BASED MODULE</span><h1>{t.diagnosis}</h1><p>Capture a clear image of a sugarcane leaf to request an assessment.</p></div></div><div className="model-notice"><BadgeAlert size={18} /><div><strong>{modelStatus === "experimental_enabled" ? t.experimentalModel : t.modelUnavailable}</strong><p>{modelStatus === "experimental_enabled" ? t.experimentalWarning : "Model status is reported honestly; no placeholder or simulated result will be displayed."}</p></div></div><form className="diagnosis-form" onSubmit={(e) => void submit(e)}><label className="field-label">{t.chooseImage}</label><p className="field-hint">{t.imageHelp}</p>{preview ? <div className="image-preview"><img src={preview} alt="Selected leaf preview" /><button type="button" className="remove-image" onClick={() => { setFile(null); setResult(null); }} aria-label="Remove image"><X size={16} /></button></div> : <label className="drop-zone"><Upload size={24} /><strong>{t.upload}</strong><span>{t.uploadNone}</span><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(e) => choose(e.target.files?.[0])} /></label>}<label className="field-label" htmlFor="diagnosis-farm">{t.selectFarm}</label><select id="diagnosis-farm" className="text-input" value={farmId} onChange={(e) => setFarmId(e.target.value)}><option value="">No farm selected</option>{farms.map((farm) => <option key={farm.id} value={farm.id}>{farm.name}</option>)}</select>{error && <p className="form-error" role="alert">{error}</p>}{result && <section className="prediction-result" aria-live="polite"><span className="eyebrow">{t.resultLabel}</span><h3>{result.predicted_class}</h3><p>{t.outputScore}: <strong>{result.uncalibrated_score.toFixed(3)}</strong></p><p className="field-hint">Model {result.model_version} · {result.processing_time_ms} ms · not saved to history</p><p className="result-warning">{result.warning}</p><details><summary>{t.alternatives}</summary>{result.alternative_predictions.map((item) => <p key={item.disease_class}>{item.disease_class}: {item.uncalibrated_score.toFixed(3)}</p>)}</details></section>}<button className="primary-button submit-button" disabled={!file || submitting}>{submitting ? "Checking…" : t.send}<ArrowRight size={17} /></button></form></div>;
+  return <div className="page-enter"><div className="page-heading"><div><span className="eyebrow">IMAGE-BASED MODULE</span><h1>{t.diagnosis}</h1><p>Capture a clear image of a sugarcane leaf to request an assessment.</p></div></div><div className="model-notice"><BadgeAlert size={18} /><div><strong>{modelStatus === "experimental_enabled" ? t.experimentalModel : t.modelUnavailable}</strong><p>{modelStatus === "experimental_enabled" ? t.experimentalWarning : "Model status is reported honestly; no placeholder or simulated result will be displayed."}</p></div></div><form className="diagnosis-form" onSubmit={(e) => void submit(e)}><label className="field-label">{t.chooseImage}</label><p className="field-hint">{t.imageHelp}</p>{preview ? <div className="image-preview"><img src={preview} alt="Selected leaf preview" /><button type="button" className="remove-image" onClick={() => { setFile(null); setResult(null); }} aria-label="Remove image"><X size={16} /></button></div> : <label className="drop-zone"><Upload size={24} /><strong>{t.upload}</strong><span>{t.uploadNone}</span><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(e) => choose(e.target.files?.[0])} /></label>}<label className="field-label" htmlFor="diagnosis-farm">{t.selectFarm}</label><select id="diagnosis-farm" className="text-input" value={farmId} onChange={(e) => setFarmId(e.target.value)}><option value="">No farm selected</option>{farms.map((farm) => <option key={farm.id} value={farm.id}>{farm.name}</option>)}</select>{error && <p className="form-error" role="alert">{error}</p>}{result && <section className="prediction-result" aria-live="polite"><span className="eyebrow">{t.resultLabel}</span><h3>{result.predicted_class}</h3><p>{t.outputScore}: <strong>{result.uncalibrated_score.toFixed(3)}</strong></p><p className="field-hint">Model {result.model_version} · {result.processing_time_ms} ms · saved to history without the uploaded image</p><p className="result-warning">{result.warning}</p><details><summary>{t.alternatives}</summary>{result.alternative_predictions.map((item) => <p key={item.disease_class}>{item.disease_class}: {item.uncalibrated_score.toFixed(3)}</p>)}</details></section>}<button className="primary-button submit-button" disabled={!file || submitting}>{submitting ? "Checking…" : t.send}<ArrowRight size={17} /></button></form></div>;
 }
 
 function RiskAssessment({ farms, t }: { farms: Farm[]; t: typeof copy.en }) {
@@ -280,7 +288,82 @@ function FarmDialog({ t, onClose, onSaved }: { t: typeof copy.en; onClose: () =>
   return <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="farm-dialog-title"><div className="modal-heading"><div><span className="eyebrow">FARM DETAILS</span><h2 id="farm-dialog-title">{t.addFarm}</h2></div><button className="icon-button" onClick={onClose} aria-label="Close"><X /></button></div><form onSubmit={(e) => void submit(e)}><label className="field-label" htmlFor="farm-name">{t.farmName}</label><input id="farm-name" name="name" className="text-input" required maxLength={120} /><p className="field-label">{t.location}</p><div className="two-fields"><label><span className="sr-only">{t.latitude}</span><input name="latitude" type="number" step="any" min="-90" max="90" className="text-input" placeholder={t.latitude} /></label><label><span className="sr-only">{t.longitude}</span><input name="longitude" type="number" step="any" min="-180" max="180" className="text-input" placeholder={t.longitude} /></label></div><label className="field-label" htmlFor="farm-crop">{t.crop}</label><input id="farm-crop" name="crop_variety" className="text-input" maxLength={120} />{error && <p className="form-error" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>{t.cancel}</button><button className="primary-button" disabled={saving}>{saving ? "Saving…" : t.saveFarm}</button></div></form></section></div>;
 }
 
-function AuthDialog({ t, mode, setMode, onClose, onSuccess }: { t: typeof copy.en; mode: "login" | "register"; setMode: (mode: "login" | "register") => void; onClose: () => void; onSuccess: () => void }) {
+function HistoryView({ t }: { t: typeof copy.en }) {
+  const [diagnoses, setDiagnoses] = useState<DiagnosisHistory[]>([]);
+  const [risks, setRisks] = useState<RiskHistory[]>([]);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    Promise.all([
+      api<DiagnosisHistory[]>("/diagnosis/history"),
+      api<RiskHistory[]>("/risk/history"),
+    ]).then(([image, risk]) => { setDiagnoses(image); setRisks(risk); })
+      .catch((e) => setError(e instanceof Error ? e.message : t.failed));
+  }, [t]);
+  return <div className="page-enter">
+    <div className="page-heading"><div><span className="eyebrow">ASSESSMENT RECORDS</span><h1>History</h1><p>Review records saved by the API.</p></div></div>
+    {error && <p className="form-error" role="alert">{error}</p>}
+    <section className="workspace-section"><h2>Image assessments</h2>{diagnoses.length ? <div className="record-list">{diagnoses.map((item) => <article className="record-card" key={item.id}><div><strong>{item.predicted_class ?? item.status}</strong><span>{item.status}</span></div><time>{new Date(item.created_at).toLocaleString()}</time></article>)}</div> : <div className="empty-card"><History /><div><h3>No saved image assessments</h3><p>The experimental API stores prediction metadata, never the uploaded image.</p></div></div>}</section>
+    <section className="workspace-section"><h2>Risk assessments</h2>{risks.length ? <div className="record-list">{risks.map((item) => <article className="record-card" key={item.id}><div><strong>{item.disease_class}</strong><span>{item.status}</span></div><time>{new Date(item.created_at).toLocaleString()}</time></article>)}</div> : <div className="empty-card"><CloudSun /><div><h3>No saved risk assessments</h3><p>No validated environmental model is configured.</p></div></div>}</section>
+  </div>;
+}
+
+function KnowledgeView({ language }: { language: Language }) {
+  const [entries, setEntries] = useState<Knowledge[]>([]);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    api<Knowledge[]>(`/knowledge/diseases?language=${language}`)
+      .then(setEntries).catch((e) => setError(e instanceof Error ? e.message : "Knowledge could not be loaded."));
+  }, [language]);
+  return <div className="page-enter">
+    <div className="page-heading"><div><span className="eyebrow">REVIEWED INFORMATION</span><h1>Knowledge base</h1><p>Evidence-backed guidance shown only when it is published.</p></div></div>
+    {error && <p className="form-error" role="alert">{error}</p>}
+    {entries.length ? <div className="knowledge-grid">{entries.map((entry) => <article className="knowledge-card" key={`${entry.disease_class}-${entry.language_code}`}><h2>{entry.display_name}</h2>{entry.scientific_name && <em>{entry.scientific_name}</em>}<h3>Symptoms</h3><p>{entry.symptoms}</p><h3>Prevention</h3><p>{entry.preventive_guidance}</p><h3>Monitoring</h3><p>{entry.monitoring_guidance}</p>{entry.management_guidance && <><h3>Management</h3><p>{entry.management_guidance}</p></>}<small>Source: {entry.source_reference}</small></article>)}</div> : <div className="empty-card"><BookOpen /><div><h3>No reviewed knowledge entries</h3><p>An administrator must publish source-backed entries.</p></div></div>}
+  </div>;
+}
+
+function SettingsView({ user, language, onLanguage, onDeleted }: { user: User; language: Language; onLanguage: (language: Language) => void; onDeleted: () => Promise<void> }) {
+  const [saved, setSaved] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function deleteAccount() {
+    if (!window.confirm("Delete this account and all associated farms and history? This cannot be undone.")) return;
+    setDeleting(true);
+    setError("");
+    try {
+      await api<void>("/auth/me", { method: "DELETE" });
+      await onDeleted();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "The account could not be deleted.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+  return <div className="page-enter">
+    <div className="page-heading"><div><span className="eyebrow">ACCOUNT</span><h1>Settings</h1><p>Manage preferences for this workspace.</p></div></div>
+    <section className="settings-panel"><h2>Profile</h2><dl><dt>Name</dt><dd>{user.full_name}</dd><dt>Email</dt><dd>{user.email}</dd><dt>Role</dt><dd>{user.role}</dd></dl><label className="field-label" htmlFor="settings-language">Interface language</label><select id="settings-language" className="text-input" value={language} onChange={(event) => { onLanguage(event.target.value as Language); setSaved(true); }}><option value="en">English</option><option value="ta">தமிழ்</option></select>{saved && <p className="form-success">Preference saved.</p>}</section>
+    <section className="settings-panel danger-zone"><h2>Delete account</h2><p>Permanently remove this account, owned farms, weather cache, and prediction history.</p>{error && <p className="form-error" role="alert">{error}</p>}<button className="danger-button" type="button" onClick={() => void deleteAccount()} disabled={deleting}>{deleting ? "Deleting…" : "Delete my account"}</button></section>
+  </div>;
+}
+
+function AdminView() {
+  const [models, setModels] = useState<ModelVersion[]>([]);
+  const [quality, setQuality] = useState<{ status: string; message: string }>({ status: "checking", message: "Checking data quality configuration…" });
+  const [error, setError] = useState("");
+  useEffect(() => {
+    Promise.all([api<ModelVersion[]>("/admin/models"), api<{ status: string; message: string }>("/admin/data-quality")])
+      .then(([items, dataQuality]) => { setModels(items); setQuality(dataQuality); })
+      .catch((e) => setError(e instanceof Error ? e.message : "Administration data could not be loaded."));
+  }, []);
+  return <div className="page-enter">
+    <div className="page-heading"><div><span className="eyebrow">ADMINISTRATION</span><h1>Model governance</h1><p>Review active artifacts and data-quality configuration.</p></div></div>
+    {error && <p className="form-error" role="alert">{error}</p>}
+    <section className="workspace-section"><h2>Data quality</h2><div className="model-notice"><ShieldCheck /><div><strong>{quality.status}</strong><p>{quality.message}</p></div></div></section>
+    <section className="workspace-section"><h2>Registered model versions</h2>{models.length ? <div className="record-list">{models.map((item) => <article className="record-card" key={item.id}><div><strong>{item.model_type} · {item.version}</strong><span>{item.is_active ? "active" : "inactive"}</span></div><small>{item.dataset_version ?? "dataset not recorded"}</small></article>)}</div> : <div className="empty-card"><ShieldCheck /><div><h3>No model registry entries</h3><p>Artifacts are not silently registered or activated.</p></div></div>}</section>
+  </div>;
+}
+
+function AuthDialog({ t, mode, setMode, onClose, onSuccess }:{ t: typeof copy.en; mode: "login" | "register"; setMode: (mode: "login" | "register") => void; onClose: () => void; onSuccess: () => void }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {

@@ -96,7 +96,7 @@ def upgrade():
         sa.Column("id", sa.String(length=36), primary_key=True),
         sa.Column("user_id", sa.String(length=36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
         sa.Column("farm_id", sa.String(length=36), sa.ForeignKey("farms.id", ondelete="SET NULL")),
-        sa.Column("image_storage_key", sa.String(length=500), nullable=False),
+        sa.Column("image_storage_key", sa.String(length=500)),
         sa.Column("predicted_class", sa.String(length=100)),
         sa.Column("confidence", sa.Float()),
         sa.Column("alternative_predictions", sa.JSON()),

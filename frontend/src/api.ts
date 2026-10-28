@@ -6,6 +6,49 @@ export type User = {
   role: string;
 };
 
+export type DiagnosisHistory = {
+  id: string;
+  predicted_class: string | null;
+  confidence: number | null;
+  status: string;
+  detector_model_version: string | null;
+  classifier_model_version: string | null;
+  created_at: string;
+};
+
+export type RiskHistory = {
+  id: string;
+  disease_class: string;
+  risk_score: number | null;
+  risk_category: string | null;
+  status: string;
+  created_at: string;
+};
+
+export type Knowledge = {
+  disease_class: string;
+  language_code: "en" | "ta";
+  display_name: string;
+  scientific_name: string | null;
+  symptoms: string;
+  preventive_guidance: string;
+  monitoring_guidance: string;
+  management_guidance: string | null;
+  source_reference: string;
+  last_reviewed_at: string | null;
+};
+
+export type ModelVersion = {
+  id: string;
+  model_type: string;
+  version: string;
+  artifact_reference: string | null;
+  framework: string | null;
+  dataset_version: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
 export type Farm = {
   id: string;
   name: string;

@@ -8,6 +8,7 @@ __pycache__/
 htmlcov/
 node_modules/
 dist/
+*.tsbuildinfo
 frontend/.vite/
 backend/uploads/
 backend/alembic/versions/__pycache__/

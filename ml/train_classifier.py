@@ -29,13 +29,20 @@ IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
-def image_records(data_dir: Path) -> tuple[list[dict], dict]:
+def image_records(data_dir: Path, session_manifest: Path | None = None) -> tuple[list[dict], dict]:
     if not data_dir.is_dir():
         raise FileNotFoundError(f"Dataset directory does not exist: {data_dir}")
     class_dirs = {child.name.casefold(): child for child in data_dir.iterdir() if child.is_dir()}
     missing = [name for name in CLASSES if name.casefold() not in class_dirs]
     if missing:
         raise ValueError(f"Missing class folders: {', '.join(missing)}")
+
+    session_by_path: dict[str, str] = {}
+    if session_manifest:
+        session_payload = json.loads(session_manifest.read_text(encoding="utf-8"))
+        if not isinstance(session_payload, dict):
+            raise ValueError("Session manifest must map relative image paths to session identifiers.")
+        session_by_path = {str(path): str(session) for path, session in session_payload.items()}
 
     hashes: dict[str, list[dict]] = defaultdict(list)
     invalid = []
@@ -51,8 +58,16 @@ def image_records(data_dir: Path) -> tuple[list[dict], dict]:
             except (UnidentifiedImageError, OSError, ValueError) as exc:
                 invalid.append({"path": str(path.relative_to(data_dir)), "error": str(exc)})
                 continue
+            relative_path = str(path.relative_to(data_dir))
+            if session_manifest and relative_path not in session_by_path:
+                raise ValueError(f"Session manifest omitted image: {relative_path}")
             digest = hashlib.sha256(data).hexdigest()
-            hashes[digest].append({"path": str(path.relative_to(data_dir)), "label": label, "sha256": digest})
+            hashes[digest].append({
+                "path": relative_path,
+                "label": label,
+                "sha256": digest,
+                "session_id": session_by_path.get(relative_path, "unknown"),
+            })
             counts[label] += 1
 
     cross_class = [
@@ -74,20 +89,49 @@ def image_records(data_dir: Path) -> tuple[list[dict], dict]:
         "exact_duplicate_groups": len(duplicate_groups),
         "duplicate_files_removed": sum(len(group) - 1 for group in duplicate_groups),
         "invalid_images": invalid,
+        "session_aware_splitting": bool(session_manifest),
     }
     return unique, report
 
 
 def make_splits(records: list[dict], seed: int) -> dict[str, list[dict]]:
-    labels = [record["label"] for record in records]
-    train_records, holdout = train_test_split(
-        records, test_size=0.30, random_state=seed, stratify=labels
+    session_ids = {record["session_id"] for record in records}
+    session_aware = session_ids != {"unknown"}
+    if not session_aware:
+        labels = [record["label"] for record in records]
+        train_records, holdout = train_test_split(records, test_size=0.30, random_state=seed, stratify=labels)
+        holdout_labels = [record["label"] for record in holdout]
+        validation_records, test_records = train_test_split(holdout, test_size=0.50, random_state=seed, stratify=holdout_labels)
+        return {"train": list(train_records), "validation": list(validation_records), "test": list(test_records)}
+
+    grouped: dict[str, list[dict]] = defaultdict(list)
+    for record in records:
+        grouped[record["session_id"]].append(record)
+    session_records = list(grouped.values())
+    if len(session_records) < 3:
+        raise ValueError("Session-aware splitting requires at least three capture sessions.")
+
+    def session_label(entries: list[dict]) -> str:
+        counts = Counter(entry["label"] for entry in entries)
+        return counts.most_common(1)[0][0]
+
+    session_labels = [session_label(entries) for entries in session_records]
+    train_sessions, holdout_sessions = train_test_split(
+        session_records, test_size=0.30, random_state=seed, stratify=session_labels
     )
-    holdout_labels = [record["label"] for record in holdout]
-    validation_records, test_records = train_test_split(
-        holdout, test_size=0.50, random_state=seed, stratify=holdout_labels
+    holdout_labels = [session_label(entries) for entries in holdout_sessions]
+    holdout_counts = Counter(holdout_labels)
+    stratify_holdout = holdout_labels if min(holdout_counts.values()) >= 2 else None
+    if stratify_holdout is None:
+        raise ValueError("Session-aware splitting requires at least two sessions per class in the validation/test split.")
+    validation_sessions, test_sessions = train_test_split(
+        holdout_sessions, test_size=0.50, random_state=seed, stratify=stratify_holdout
     )
-    return {"train": list(train_records), "validation": list(validation_records), "test": list(test_records)}
+    return {
+        "train": [record for entries in train_sessions for record in entries],
+        "validation": [record for entries in validation_sessions for record in entries],
+        "test": [record for entries in test_sessions for record in entries],
+    }
 
 
 class LeafDataset(Dataset):
@@ -121,6 +165,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--input-size", type=int, default=192)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--session-manifest", type=Path, help="JSON mapping every relative image path to a capture/session identifier.")
     parser.add_argument("--pretrained", action="store_true", help="Download/use official torchvision ImageNet weights for transfer learning.")
     args = parser.parse_args()
     if args.epochs < 1 or args.batch_size < 1 or args.input_size < 96:
@@ -137,7 +182,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    records, data_report = image_records(args.data_dir)
+    records, data_report = image_records(args.data_dir, args.session_manifest)
     if data_report["invalid_images"]:
         save_json(args.output_dir / "invalid_images.json", {"images": data_report["invalid_images"]})
         raise ValueError(f"{len(data_report['invalid_images'])} unreadable images found; see invalid_images.json.")
@@ -148,6 +193,10 @@ def main():
     split_hashes = {name: {record["sha256"] for record in items} for name, items in splits.items()}
     if any(split_hashes[a] & split_hashes[b] for a, b in (("train", "validation"), ("train", "test"), ("validation", "test"))):
         raise RuntimeError("Exact duplicate leakage detected between data splits.")
+    if data_report["session_aware_splitting"]:
+        split_sessions = {name: {row["session_id"] for row in items} for name, items in splits.items()}
+        if any(split_sessions[a] & split_sessions[b] for a, b in (("train", "validation"), ("train", "test"), ("validation", "test"))):
+            raise RuntimeError("Capture-session leakage detected between data splits.")
     split_manifest = {
         name: [{"path": row["path"], "label": row["label"], "sha256": row["sha256"]} for row in items]
         for name, items in splits.items()

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, require_admin
 from app.core.config import settings
 from app.db.session import get_db
-from app.models import DiseaseKnowledge, Farm, ImageDiagnosis, ModelVersion, RiskPrediction, User, WeatherObservation
+from app.models import AuditLog, DiseaseKnowledge, Farm, ImageDiagnosis, ModelVersion, RiskPrediction, User, WeatherObservation
 from app.schemas import (
     FarmCreate,
     FarmOut,
@@ -35,11 +35,17 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def record_audit(db: Session, actor: User | None, action: str, resource_type: str, resource_id: str | None = None, metadata: dict | None = None) -> None:
+    db.add(AuditLog(actor_user_id=actor.id if actor else None, action=action, resource_type=resource_type, resource_id=resource_id, metadata_json=metadata))
+
+
 @router.post("/auth/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreate, response: Response, db: Session = Depends(get_db)):
     user = User(email=payload.email.lower(), password_hash=hash_password(payload.password), full_name=payload.full_name.strip(), preferred_language=payload.preferred_language)
     db.add(user)
+    record_audit(db, user, "auth.registered", "user", user.id)
     try:
+        db.flush()
         db.commit()
     except IntegrityError as exc:
         db.rollback()
@@ -80,6 +86,16 @@ def update_preferences(payload: UserPreferences, user: User = Depends(get_curren
     return user
 
 
+@router.delete("/auth/me", status_code=204)
+def delete_account(response: Response, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    record_audit(db, user, "auth.account_deleted", "user", user.id)
+    db.delete(user)
+    db.commit()
+    clear_session_cookie(response)
+    response.status_code = 204
+    return response
+
+
 @router.get("/farms", response_model=list[FarmOut])
 def list_farms(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return list(db.scalars(select(Farm).where(Farm.user_id == user.id).order_by(Farm.created_at.desc())))
@@ -89,6 +105,7 @@ def list_farms(user: User = Depends(get_current_user), db: Session = Depends(get
 def create_farm(payload: FarmCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     farm = Farm(user_id=user.id, **payload.model_dump())
     db.add(farm)
+    record_audit(db, user, "farm.created", "farm", farm.id)
     db.commit()
     db.refresh(farm)
     return farm
@@ -114,6 +131,7 @@ def update_farm(farm_id: str, payload: FarmUpdate, user: User = Depends(get_curr
         setattr(farm, key, value)
     if (farm.latitude is None) != (farm.longitude is None):
         raise HTTPException(status_code=422, detail="Latitude and longitude must be provided together.")
+    record_audit(db, user, "farm.updated", "farm", farm.id)
     db.commit()
     db.refresh(farm)
     return farm
@@ -122,6 +140,7 @@ def update_farm(farm_id: str, payload: FarmUpdate, user: User = Depends(get_curr
 @router.delete("/farms/{farm_id}", status_code=204)
 def delete_farm(farm_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     farm = owned_farm(farm_id, user, db)
+    record_audit(db, user, "farm.deleted", "farm", farm.id)
     db.delete(farm)
     db.commit()
 
@@ -277,14 +296,32 @@ async def diagnose(
         image.verify()
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as exc:
         raise HTTPException(status_code=415, detail="Uploaded content is not a supported image.") from exc
-    if not Path(settings.image_model_path).is_file():
-        raise HTTPException(status_code=503, detail={"code": "image_model_unavailable", "message": "No validated image model is configured. No diagnosis was generated.", "validation_ms": round((perf_counter() - started) * 1000)})
+    if not settings.enable_experimental_image_model or not Path(settings.image_model_path).is_file():
+        raise HTTPException(status_code=503, detail={"code": "image_model_unavailable", "message": "The experimental image model is disabled or no validated artifact is configured. No diagnosis was generated.", "validation_ms": round((perf_counter() - started) * 1000)})
     try:
         result = await run_in_threadpool(classify_image, raw)
     except ImageModelUnavailable as exc:
         raise HTTPException(status_code=503, detail={"code": "image_model_unavailable", "message": str(exc)}) from exc
     except ValueError as exc:
         raise HTTPException(status_code=415, detail=str(exc)) from exc
+
+    record = ImageDiagnosis(
+        user_id=user.id,
+        farm_id=farm_id,
+        image_storage_key=None,
+        predicted_class=result["predicted_class"],
+        confidence=result["uncalibrated_score"],
+        alternative_predictions=result["alternative_predictions"],
+        classifier_model_version=result["model_version"],
+        processing_time_ms=result["processing_time_ms"],
+        status="experimental",
+        uncertainty_reason="Uncalibrated output; independent field validation and calibration are incomplete.",
+    )
+    db.add(record)
+    record_audit(db, user, "diagnosis.experimental_generated", "image_diagnosis", record.id, {"saved_to_history": True, "image_stored": False})
+    db.commit()
+    db.refresh(record)
+    result["saved_to_history"] = True
     return result
 
 
@@ -363,15 +400,16 @@ def live():
 @router.get("/health/ready")
 def ready(db: Session = Depends(get_db)):
     def artifact_status(path: str) -> str:
-        return "disabled" if Path(path).is_file() else "unavailable"
+        return "disabled" if not Path(path).is_file() else "unavailable"
 
+    image_model_status = (
+        "experimental_enabled"
+        if settings.enable_experimental_image_model and Path(settings.image_model_path).is_file()
+        else "disabled" if not settings.enable_experimental_image_model else "unavailable"
+    )
     checks = {
         "database": "ok",
-        "image_model": (
-            "experimental_enabled"
-            if settings.enable_experimental_image_model and Path(settings.image_model_path).is_file()
-            else artifact_status(settings.image_model_path)
-        ),
+        "image_model": image_model_status,
         "risk_model": artifact_status(settings.risk_model_path),
     }
     try:

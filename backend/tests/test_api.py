@@ -28,6 +28,17 @@ def test_registration_and_farm_crud(client):
     assert client.delete(f"/api/v1/farms/{farm.json()['id']}").status_code == 204
 
 
+def test_account_deletion_removes_owned_data_and_session(client):
+    register(client)
+    farm = client.post("/api/v1/farms", json={"name": "Field to remove"})
+    assert farm.status_code == 201
+    deleted = client.delete("/api/v1/auth/me")
+    assert deleted.status_code == 204
+    assert "sugarcane_session" not in deleted.cookies
+    assert client.get("/api/v1/auth/me").status_code == 401
+    assert client.get("/api/v1/farms").status_code == 401
+
+
 def test_users_cannot_access_another_users_farm(client):
     register(client, "first@example.com")
     farm = client.post("/api/v1/farms", json={"name": "Private Field"}).json()
@@ -106,7 +117,33 @@ def test_experimental_image_result_is_labeled_uncalibrated_and_not_saved(client,
     assert response.status_code == 200
     assert response.json()["status"] == "experimental"
     assert response.json()["uncalibrated_score"] == 0.72
-    assert response.json()["saved_to_history"] is False
+    assert response.json()["saved_to_history"] is True
+    history = client.get("/api/v1/diagnosis/history")
+    assert history.status_code == 200
+    assert len(history.json()) == 1
+    assert history.json()[0]["status"] == "experimental"
+
+
+def test_experimental_model_file_is_not_used_without_opt_in(client, monkeypatch, tmp_path):
+    import app.api.routes as routes
+
+    artifact = tmp_path / "model.pt"
+    artifact.write_bytes(b"test artifact marker")
+    monkeypatch.setattr(routes.settings, "image_model_path", str(artifact))
+    monkeypatch.setattr(routes.settings, "enable_experimental_image_model", False)
+    register(client)
+
+    from io import BytesIO
+
+    from PIL import Image
+
+    buffer = BytesIO()
+    Image.new("RGB", (16, 16), "green").save(buffer, format="JPEG")
+    response = client.post(
+        "/api/v1/diagnosis/predict",
+        files={"file": ("leaf.jpg", buffer.getvalue(), "image/jpeg")},
+    )
+    assert response.status_code == 503
 
 
 def test_readiness_marks_opted_in_image_model_as_experimental(client, monkeypatch, tmp_path):
@@ -192,5 +229,5 @@ def test_health_endpoints_report_api_and_dependency_status(client):
     assert ready.status_code == 200
     assert ready.json()["status"] == "ready"
     assert ready.json()["checks"]["database"] == "ok"
-    assert ready.json()["checks"]["image_model"] == "unavailable"
-    assert ready.json()["checks"]["risk_model"] == "unavailable"
+    assert ready.json()["checks"]["image_model"] == "disabled"
+    assert ready.json()["checks"]["risk_model"] == "disabled"

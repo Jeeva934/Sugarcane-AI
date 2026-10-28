@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -30,6 +31,24 @@ def test_identical_images_are_collapsed_before_splitting(tmp_path):
     assert not (hashes["train"] & hashes["validation"])
     assert not (hashes["train"] & hashes["test"])
     assert not (hashes["validation"] & hashes["test"])
+
+
+def test_session_manifest_keeps_capture_sessions_out_of_different_splits(tmp_path):
+    create_class_images(tmp_path, images_per_class=40)
+    manifest = {}
+    for label in CLASSES:
+        for index, path in enumerate(sorted((tmp_path / label).glob("*.jpg"))):
+            manifest[str(path.relative_to(tmp_path))] = f"{label}-session-{index // 2}"
+    manifest_path = tmp_path / "sessions.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    records, report = image_records(tmp_path, manifest_path)
+    assert report["session_aware_splitting"] is True
+    splits = make_splits(records, seed=42)
+    session_sets = [{record["session_id"] for record in rows} for rows in splits.values()]
+    assert len(session_sets[0].intersection(session_sets[1])) == 0
+    assert len(session_sets[0].intersection(session_sets[2])) == 0
+    assert len(session_sets[1].intersection(session_sets[2])) == 0
 
 
 def test_conflicting_labels_for_identical_images_are_rejected(tmp_path):

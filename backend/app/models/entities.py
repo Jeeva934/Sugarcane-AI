@@ -120,7 +120,7 @@ class ImageDiagnosis(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     farm_id: Mapped[str | None] = mapped_column(ForeignKey("farms.id", ondelete="SET NULL"), index=True)
-    image_storage_key: Mapped[str] = mapped_column(String(500))
+    image_storage_key: Mapped[str | None] = mapped_column(String(500))
     predicted_class: Mapped[str | None] = mapped_column(String(100))
     confidence: Mapped[float | None] = mapped_column(Float)
     alternative_predictions: Mapped[list | None] = mapped_column(JSON)

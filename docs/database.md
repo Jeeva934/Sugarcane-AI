@@ -24,7 +24,7 @@ referential integrity for production retention/deletion.
 
 ## Local operations
 
-Run PostgreSQL using `docker compose up -d db`, then from the repository root:
+SQLite is selected for the local/prototype deployment. From the repository root:
 
 ```powershell
 python -m pip install -r backend\requirements.txt
