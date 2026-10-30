@@ -1,0 +1,47 @@
+{
+  "dataset_1": {
+    "dataset_root": "datasets\\mendeley_v1\\Sugarcane Leaf Disease Dataset",
+    "total_images": 2521,
+    "corrupt_images": [],
+    "corrupt_count": 0,
+    "class_distribution": {
+      "Healthy": 522,
+      "Mosaic": 462,
+      "RedRot": 518,
+      "Rust": 514,
+      "Yellow": 505
+    },
+    "top_resolutions": {
+      "493x1040": 958,
+      "780x1040": 580,
+      "1040x493": 217,
+      "585x1040": 161,
+      "1040x780": 75
+    },
+    "exact_duplicate_groups_count": 184,
+    "exact_duplicate_files_count": 210
+  },
+  "dataset_2": {
+    "dataset_root": "datasets\\mendeley_v2_supplementary\\Sugarcane Disease Dataset",
+    "total_images": 3358,
+    "corrupt_images": [],
+    "corrupt_count": 0,
+    "class_distribution": {
+      "BrownRust": 509,
+      "Dried Leaves": 473,
+      "Healthy Leaves": 456,
+      "Mawa": 433,
+      "Mites": 363,
+      "RedSpot": 601,
+      "YellowLeaf": 523
+    },
+    "top_resolutions": {
+      "1000x1000": 3357,
+      "4080x3072": 1
+    },
+    "exact_duplicate_groups_count": 53,
+    "exact_duplicate_files_count": 385
+  },
+  "cross_dataset_overlap_count": 0,
+  "cross_duplicates_sample": []
+}

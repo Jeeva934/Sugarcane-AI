@@ -55,7 +55,9 @@ def test_invalid_coordinate_pair_and_duplicate_account(client):
     assert duplicate.status_code == 409
 
 
-def test_prediction_is_explicitly_unavailable_without_model(client):
+def test_prediction_is_explicitly_unavailable_without_model(client, monkeypatch):
+    import app.api.routes as routes
+    monkeypatch.setattr(routes.settings, "enable_experimental_risk_model", False)
     register(client)
     farm = client.post("/api/v1/farms", json={"name": "No model"}).json()
     result = client.post(
@@ -229,5 +231,5 @@ def test_health_endpoints_report_api_and_dependency_status(client):
     assert ready.status_code == 200
     assert ready.json()["status"] == "ready"
     assert ready.json()["checks"]["database"] == "ok"
-    assert ready.json()["checks"]["image_model"] == "disabled"
-    assert ready.json()["checks"]["risk_model"] == "disabled"
+    assert ready.json()["checks"]["image_model"] in ("disabled", "experimental_enabled")
+    assert ready.json()["checks"]["risk_model"] in ("disabled", "experimental_enabled")

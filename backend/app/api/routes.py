@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, require_admin
 from app.core.config import settings
 from app.db.session import get_db
-from app.models import AuditLog, DiseaseKnowledge, Farm, ImageDiagnosis, ModelVersion, RiskPrediction, User, WeatherObservation
+from app.models import AuditLog, Explanation, DiseaseKnowledge, Farm, ImageDiagnosis, ModelVersion, RiskPrediction, User, WeatherObservation
 from app.schemas import (
     FarmCreate,
     FarmOut,
@@ -29,6 +29,7 @@ from app.schemas import (
     UserPreferences,
 )
 from app.services.image_classifier import ImageModelUnavailable, classify_image
+from app.services.risk_predictor import RiskModelUnavailable, predict_environmental_risk
 from app.services.security import clear_session_cookie, hash_password, set_session_cookie, verify_password
 
 router = APIRouter()
@@ -249,12 +250,58 @@ def refresh_weather(farm_id: str, user: User = Depends(get_current_user), db: Se
     return {"status": "unavailable" if not cached else "stale", "provider": "Open-Meteo", "cached": bool(cached), "observation": cached[0] if cached else None, "unavailable_fields": ["temperature_min", "temperature_max"], "message": "Weather refresh failed; no current weather assessment should be inferred."}
 
 
-@router.post("/risk/predict", status_code=503)
-def predict_risk(payload: RiskRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    owned_farm(payload.farm_id, user, db)
-    if not Path(settings.risk_model_path).is_file():
-        raise HTTPException(status_code=503, detail={"code": "risk_model_unavailable", "message": "No validated risk model is configured. No risk score was generated."})
-    raise HTTPException(status_code=503, detail={"code": "risk_inference_not_implemented", "message": "Configured model artifacts require an inference adapter before predictions can be served."})
+@router.post("/risk/predict")
+async def predict_risk(payload: RiskRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    farm = owned_farm(payload.farm_id, user, db)
+    if not settings.enable_experimental_risk_model or not Path(settings.risk_model_path).is_file():
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "risk_model_unavailable", "message": "The experimental risk model is disabled or no validated artifact is configured. No risk score was generated."}
+        )
+    if farm.latitude is None or farm.longitude is None:
+        raise HTTPException(status_code=422, detail="Add confirmed farm coordinates before requesting environmental risk.")
+    try:
+        result = await run_in_threadpool(predict_environmental_risk, farm.latitude, farm.longitude)
+    except RiskModelUnavailable as exc:
+        raise HTTPException(status_code=503, detail={"code": "risk_model_unavailable", "message": str(exc)}) from exc
+    except Exception as exc:
+        logger.exception("Environmental risk inference failed")
+        raise HTTPException(status_code=500, detail="Risk calculation encountered an internal error.") from exc
+
+    now = datetime.now(timezone.utc)
+    record = RiskPrediction(
+        user_id=user.id,
+        farm_id=farm.id,
+        disease_class=payload.disease_class or "CompositeRisk",
+        risk_score=result["overall_risk_score"],
+        risk_category=result["risk_category"],
+        prediction_timestamp=now,
+        weather_data_timestamp=now,
+        data_freshness_status="live",
+        model_version="xgboost_risk_prototype_v1",
+        input_period_start=payload.period_start or now,
+        input_period_end=payload.period_end or (now + timedelta(days=7)),
+        forecast_horizon_days=7,
+        status="experimental",
+    )
+    db.add(record)
+    db.flush()
+
+    db.add(Explanation(
+        prediction_type="risk_assessment",
+        prediction_id=record.id,
+        explanation_type="shap_tree",
+        structured_result={"drivers": result["primary_drivers"]},
+        model_version="xgboost_risk_prototype_v1",
+    ))
+
+    record_audit(db, user, "risk.experimental_generated", "risk_prediction", record.id, {"saved_to_history": True})
+    db.commit()
+    db.refresh(record)
+
+    result["id"] = record.id
+    result["saved_to_history"] = True
+    return result
 
 
 @router.get("/risk/history")
@@ -273,7 +320,18 @@ def get_risk(prediction_id: str, user: User = Depends(get_current_user), db: Ses
 @router.get("/risk/{prediction_id}/explanation")
 def risk_explanation(prediction_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     get_risk(prediction_id, user, db)
-    return {"status": "unavailable", "message": "No explanation is available because a validated model is not configured."}
+    expl = db.scalar(select(Explanation).where(
+        Explanation.prediction_id == prediction_id,
+        Explanation.explanation_type == "shap_tree"
+    ))
+    if not expl or not expl.structured_result:
+        return {"status": "unavailable", "message": "No SHAP explanation was recorded for this assessment."}
+    return {
+        "status": "available",
+        "explanation_type": "shap_tree",
+        "drivers": expl.structured_result.get("drivers", []),
+        "model_version": expl.model_version
+    }
 
 
 @router.post("/diagnosis/predict")
@@ -318,6 +376,15 @@ async def diagnose(
         uncertainty_reason="Uncalibrated output; independent field validation and calibration are incomplete.",
     )
     db.add(record)
+    db.flush()
+    if result.get("heatmap_base64"):
+        db.add(Explanation(
+            prediction_type="image_diagnosis",
+            prediction_id=record.id,
+            explanation_type="grad_cam_plus_plus",
+            structured_result={"heatmap_base64": result["heatmap_base64"]},
+            model_version=result["model_version"],
+        ))
     record_audit(db, user, "diagnosis.experimental_generated", "image_diagnosis", record.id, {"saved_to_history": True, "image_stored": False})
     db.commit()
     db.refresh(record)
@@ -341,7 +408,15 @@ def get_diagnosis(diagnosis_id: str, user: User = Depends(get_current_user), db:
 @router.get("/diagnosis/{diagnosis_id}/heatmap")
 def diagnosis_heatmap(diagnosis_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     get_diagnosis(diagnosis_id, user, db)
-    raise HTTPException(status_code=404, detail="No heatmap was generated for this diagnosis.")
+    expl = db.scalar(select(Explanation).where(
+        Explanation.prediction_id == diagnosis_id,
+        Explanation.explanation_type == "grad_cam_plus_plus"
+    ))
+    if not expl or not expl.structured_result or not expl.structured_result.get("heatmap_base64"):
+        raise HTTPException(status_code=404, detail="No heatmap was generated for this diagnosis.")
+    import base64
+    img_data = base64.b64decode(expl.structured_result["heatmap_base64"])
+    return Response(content=img_data, media_type="image/jpeg")
 
 
 @router.get("/knowledge/diseases", response_model=list[KnowledgeOut])
@@ -407,10 +482,15 @@ def ready(db: Session = Depends(get_db)):
         if settings.enable_experimental_image_model and Path(settings.image_model_path).is_file()
         else "disabled" if not settings.enable_experimental_image_model else "unavailable"
     )
+    risk_model_status = (
+        "experimental_enabled"
+        if settings.enable_experimental_risk_model and Path(settings.risk_model_path).is_file()
+        else "disabled" if not settings.enable_experimental_risk_model else "unavailable"
+    )
     checks = {
         "database": "ok",
         "image_model": image_model_status,
-        "risk_model": artifact_status(settings.risk_model_path),
+        "risk_model": risk_model_status,
     }
     try:
         db.execute(select(User.id).limit(1))

@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     image_model_path: str = ""
     enable_experimental_image_model: bool = False
     risk_model_path: str = ""
+    enable_experimental_risk_model: bool = False
 
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parents[3] / ".env",

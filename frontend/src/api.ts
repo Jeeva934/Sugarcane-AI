@@ -60,6 +60,86 @@ export type Farm = {
   created_at: string;
 };
 
+export type ImageQuality = {
+  is_acceptable: boolean;
+  blur_score: number;
+  is_blurry: boolean;
+  brightness_score: number;
+  lighting: "optimal" | "dark" | "glare";
+  contrast_score: number;
+  resolution: string;
+  quality_warnings: string[];
+};
+
+export type UncertaintyInfo = {
+  is_uncertain: boolean;
+  predictive_entropy: number;
+  margin_to_second: number;
+  confidence_level: "high" | "moderate" | "low / uncertain";
+  reason: string | null;
+};
+
+export type DiagnosisResult = {
+  status: string;
+  predicted_class: string;
+  uncalibrated_score: number;
+  alternative_predictions: { disease_class: string; uncalibrated_score: number }[];
+  model_version: string;
+  processing_time_ms: number;
+  warning: string;
+  saved_to_history: boolean;
+  explanation?: string | null;
+  heatmap_base64?: string | null;
+  image_quality?: ImageQuality;
+  uncertainty?: UncertaintyInfo;
+};
+
+export type RiskDriver = {
+  feature: string;
+  value: number;
+  shap_importance: number;
+  effect: string;
+};
+
+export type RiskResult = {
+  status: string;
+  overall_risk_score: number;
+  risk_category: "low" | "moderate" | "high";
+  disease_conduciveness_scores: {
+    red_rot: number;
+    rust: number;
+    wilt: number;
+  };
+  forecast_lead_time: string;
+  processing_time_ms: number;
+  primary_drivers: RiskDriver[];
+  weather_summary: {
+    temperature_mean_7d: number;
+    temperature_min_7d: number;
+    relative_humidity_7d: number;
+    precipitation_sum_7d: number;
+    thi_index: number;
+  };
+  scientific_disclosure: string;
+  id?: string;
+  saved_to_history?: boolean;
+};
+
+export type WeatherObservation = {
+  status: "available" | "stale" | "unavailable";
+  provider: string;
+  cached: boolean;
+  timestamp: string | null;
+  observation?: {
+    temperature_mean: number | null;
+    relative_humidity: number | null;
+    dew_point: number | null;
+    precipitation: number | null;
+    wind_speed: number | null;
+  };
+  message?: string | null;
+};
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {

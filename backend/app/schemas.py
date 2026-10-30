@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
@@ -69,12 +69,17 @@ class FarmOut(BaseModel):
 
 class RiskRequest(BaseModel):
     farm_id: str
-    disease_class: str = Field(min_length=1, max_length=100)
-    period_start: datetime
-    period_end: datetime
+    disease_class: str = Field(default="CompositeRisk", min_length=1, max_length=100)
+    period_start: datetime | None = None
+    period_end: datetime | None = None
 
     @model_validator(mode="after")
     def valid_period(self):
+        now = datetime.now(timezone.utc)
+        if self.period_start is None:
+            self.period_start = now
+        if self.period_end is None:
+            self.period_end = now + timedelta(days=7)
         if self.period_start >= self.period_end:
             raise ValueError("period_start must be earlier than period_end.")
         return self
