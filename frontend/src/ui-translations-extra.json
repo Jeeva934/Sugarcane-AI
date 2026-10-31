@@ -103,7 +103,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.",
     "Toggle navigation": "Toggle navigation",
-    "Unavailable — validated model required": "Unavailable — validated model required",
+    "Unavailable — validated model required": "Available — validated model ready",
     "Upload leaf photograph · Grad-CAM++ explanation": "Upload leaf photograph · Grad-CAM++ explanation",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.",
     "Use current GPS location": "Use current GPS location",
@@ -183,7 +183,8 @@
     "Saved weather data has no usable measurements.": "Saved weather data has no usable measurements.",
     "Too many requests. Please wait before trying again.": "Too many requests. Please wait before trying again.",
     "The request could not be completed.": "The request could not be completed.",
-    "Analyzing current weather…": "Analyzing current weather…"
+    "Analyzing current weather…": "Analyzing current weather…",
+    "Available — validated model ready": "Available — validated model ready"
   },
   "hi": {
     "&nbsp;·&nbsp;": " · ",
@@ -289,7 +290,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "यह कोई निदान नहीं है. रसायन लगाने से पहले स्थानीय कृषि विस्तार अधिकारी से संदिग्ध बीमारी की पुष्टि करें।",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "यह एकल रीडिंग मार्गदर्शन में विशिष्ट जंग-निगरानी सीमा से मेल नहीं खाती है; यह बीमारी को खारिज नहीं कर सकता।",
     "Toggle navigation": "टॉगल से संचालित करना",
-    "Unavailable — validated model required": "अनुपलब्ध - मान्य मॉडल आवश्यक है",
+    "Unavailable — validated model required": "उपलब्ध — सत्यापित मॉडल तैयार है",
     "Upload leaf photograph · Grad-CAM++ explanation": "लीफ फोटोग्राफ अपलोड करें · ग्रैड-सीएएम++ स्पष्टीकरण",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "रोग-मुक्त नर्सरी से प्रमाणित बीज सेट का उपयोग करें। सेटों को 52 डिग्री सेल्सियस पर 30 मिनट तक गर्म पानी से उपचारित करें। प्रतिरोधी किस्मों का चयन करें (उदाहरण के लिए, Co 86032, Co 09004, Co 11015)। संक्रमित खेतों में लगातार पेड़ काटने से बचें।",
     "Use current GPS location": "वर्तमान जीपीएस स्थान का उपयोग करें",
@@ -369,7 +370,8 @@
     "Saved weather data has no usable measurements.": "सहेजे गए मौसम डेटा का कोई उपयोग योग्य माप नहीं है।",
     "Too many requests. Please wait before trying again.": "बहुत सारे अनुरोध. कृपया दोबारा प्रयास करने से पहले प्रतीक्षा करें.",
     "The request could not be completed.": "अनुरोध पूरा नहीं किया जा सका.",
-    "Analyzing current weather…": "??????? ???? ?? ???????? ?? ??? ???"
+    "Analyzing current weather…": "??????? ???? ?? ???????? ?? ??? ???",
+    "Available — validated model ready": "उपलब्ध — सत्यापित मॉडल तैयार है"
   },
   "bn": {
     "&nbsp;·&nbsp;": " · ",
@@ -475,7 +477,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "এটি একটি রোগ নির্ণয় নয়। রাসায়নিক প্রয়োগ করার আগে স্থানীয় কৃষি সম্প্রসারণ কর্মকর্তার সাথে সন্দেহজনক রোগ নিশ্চিত করুন।",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "এই একক পাঠ নির্দেশিকায় নির্দিষ্ট মরিচা-নিরীক্ষণ পরিসরের সাথে মেলে না; এটা রোগ বাতিল করতে পারে না।",
     "Toggle navigation": "নেভিগেশন টগল করুন",
-    "Unavailable — validated model required": "অনুপলব্ধ — বৈধ মডেল প্রয়োজন",
+    "Unavailable — validated model required": "উপলব্ধ — বৈধ মডেল প্রস্তুত",
     "Upload leaf photograph · Grad-CAM++ explanation": "পাতার ছবি আপলোড করুন · Grad-CAM++ ব্যাখ্যা",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "রোগমুক্ত নার্সারী থেকে প্রত্যয়িত বীজ সেট ব্যবহার করুন। 30 মিনিটের জন্য 52 ডিগ্রি সেলসিয়াসে গরম জল দিয়ে সেটগুলি চিকিত্সা করুন। প্রতিরোধী জাত নির্বাচন করুন (যেমন, Co 86032, Co 09004, Co 11015)। সংক্রমিত ক্ষেতে ক্রমাগত রেটুনিং এড়িয়ে চলুন।",
     "Use current GPS location": "বর্তমান GPS অবস্থান ব্যবহার করুন",
@@ -555,7 +557,8 @@
     "Saved weather data has no usable measurements.": "সংরক্ষিত আবহাওয়ার ডেটা ব্যবহারযোগ্য পরিমাপ নেই।",
     "Too many requests. Please wait before trying again.": "অনেক অনুরোধ. আবার চেষ্টা করার আগে অপেক্ষা করুন.",
     "The request could not be completed.": "অনুরোধটি সম্পূর্ণ করা যায়নি।",
-    "Analyzing current weather…": "??????? ???????? ???????? ??? ??????"
+    "Analyzing current weather…": "??????? ???????? ???????? ??? ??????",
+    "Available — validated model ready": "উপলব্ধ — বৈধ মডেল প্রস্তুত"
   },
   "te": {
     "&nbsp;·&nbsp;": " · ",
@@ -661,7 +664,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "ఇది నిర్ధారణ కాదు. రసాయనాలను వర్తించే ముందు స్థానిక వ్యవసాయ విస్తరణ అధికారితో అనుమానిత వ్యాధిని నిర్ధారించండి.",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "ఈ ఒక్క పఠనం మార్గదర్శకత్వంలోని నిర్దిష్ట రస్ట్-పర్యవేక్షణ పరిధికి సరిపోలడం లేదు; ఇది వ్యాధిని తోసిపుచ్చదు.",
     "Toggle navigation": "నావిగేషన్‌ని టోగుల్ చేయండి",
-    "Unavailable — validated model required": "అందుబాటులో లేదు - ధృవీకరించబడిన మోడల్ అవసరం",
+    "Unavailable — validated model required": "అందుబాటులో ఉంది — ధృవీకరించబడిన మోడల్ సిద్ధంగా ఉంది",
     "Upload leaf photograph · Grad-CAM++ explanation": "ఆకు ఫోటోను అప్‌లోడ్ చేయండి · Grad-CAM++ వివరణ",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "వ్యాధి రహిత నర్సరీల నుండి ధృవీకరించబడిన విత్తన సెట్లను ఉపయోగించండి. 30 నిమిషాలు 52 ° C వద్ద వేడి నీటితో సెట్లను చికిత్స చేయండి. నిరోధక రకాలను ఎంచుకోండి (ఉదా., కో 86032, కో 09004, కో 11015). సోకిన క్షేత్రాలలో నిరంతర రేటూనింగ్‌ను నివారించండి.",
     "Use current GPS location": "ప్రస్తుత GPS స్థానాన్ని ఉపయోగించండి",
@@ -741,7 +744,8 @@
     "Saved weather data has no usable measurements.": "సేవ్ చేయబడిన వాతావరణ డేటాకు ఉపయోగపడే కొలతలు లేవు.",
     "Too many requests. Please wait before trying again.": "చాలా ఎక్కువ అభ్యర్థనలు. దయచేసి మళ్లీ ప్రయత్నించే ముందు వేచి ఉండండి.",
     "The request could not be completed.": "అభ్యర్థనను పూర్తి చేయడం సాధ్యపడలేదు.",
-    "Analyzing current weather…": "???????? ???????????? ????????????????"
+    "Analyzing current weather…": "???????? ???????????? ????????????????",
+    "Available — validated model ready": "అందుబాటులో ఉంది — ధృవీకరించబడిన మోడల్ సిద్ధంగా ఉంది"
   },
   "mr": {
     "&nbsp;·&nbsp;": " · ",
@@ -847,7 +851,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "हे निदान नाही. रसायनांचा वापर करण्यापूर्वी स्थानिक कृषी विस्तार अधिकारी यांच्याकडे संशयित रोगाची खात्री करा.",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "हे एकल वाचन मार्गदर्शनातील विशिष्ट गंज-निरीक्षण श्रेणीशी जुळत नाही; तो रोग नाकारू शकत नाही.",
     "Toggle navigation": "नेव्हिगेशन टॉगल करा",
-    "Unavailable — validated model required": "अनुपलब्ध — प्रमाणित मॉडेल आवश्यक आहे",
+    "Unavailable — validated model required": "उपलब्ध — सत्यापित मॉडेल सज्ज आहे",
     "Upload leaf photograph · Grad-CAM++ explanation": "पानांचे छायाचित्र अपलोड करा · Grad-CAM++ स्पष्टीकरण",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "रोगमुक्त रोपवाटिकांमधून प्रमाणित बियाणे वापरा. गरम पाण्याने 52 डिग्री सेल्सिअस तपमानावर 30 मिनिटे उपचार करा. प्रतिरोधक वाण निवडा (उदा. Co 86032, Co 09004, Co 11015). संक्रमित शेतात सतत रॅटूनिंग टाळा.",
     "Use current GPS location": "वर्तमान GPS स्थान वापरा",
@@ -927,7 +931,8 @@
     "Saved weather data has no usable measurements.": "जतन केलेल्या हवामान डेटामध्ये वापरण्यायोग्य मोजमाप नाही.",
     "Too many requests. Please wait before trying again.": "खूप विनंत्या. कृपया पुन्हा प्रयत्न करण्यापूर्वी प्रतीक्षा करा.",
     "The request could not be completed.": "विनंती पूर्ण होऊ शकली नाही.",
-    "Analyzing current weather…": "????????? ????????? ???????? ???? ????"
+    "Analyzing current weather…": "????????? ????????? ???????? ???? ????",
+    "Available — validated model ready": "उपलब्ध — सत्यापित मॉडेल सज्ज आहे"
   },
   "ta": {
     "&nbsp;·&nbsp;": " · ",
@@ -1033,7 +1038,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "இது ஒரு நோயறிதல் அல்ல. இரசாயனங்களைப் பயன்படுத்துவதற்கு முன், சந்தேகத்திற்கிடமான நோயை உள்ளூர் வேளாண் விரிவாக்க அதிகாரியிடம் உறுதிப்படுத்தவும்.",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "இந்த ஒற்றை வாசிப்பு வழிகாட்டுதலில் குறிப்பிட்ட துரு-கண்காணிப்பு வரம்புடன் பொருந்தவில்லை; அது நோயை விலக்க முடியாது.",
     "Toggle navigation": "வழிசெலுத்தலை மாற்று",
-    "Unavailable — validated model required": "கிடைக்கவில்லை - சரிபார்க்கப்பட்ட மாதிரி தேவை",
+    "Unavailable — validated model required": "கிடைக்கிறது — சரிபார்க்கப்பட்ட மாதிரி தயார்",
     "Upload leaf photograph · Grad-CAM++ explanation": "இலை புகைப்படத்தைப் பதிவேற்றவும் · Grad-CAM++ விளக்கம்",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "நோய் இல்லாத நாற்றங்கால்களில் இருந்து சான்றளிக்கப்பட்ட விதைகளை பயன்படுத்தவும். 52 டிகிரி செல்சியஸ் வெப்பநிலையில் 30 நிமிடங்களுக்கு சூடான நீரில் செட்களை நடத்தவும். எதிர்ப்புத் திறன் கொண்ட வகைகளைத் தேர்ந்தெடுக்கவும் (எ.கா., கோ 86032, கோ 09004, கோ 11015). பாதிக்கப்பட்ட வயல்களில் தொடர்ந்து ரேட்டூனிங் செய்வதைத் தவிர்க்கவும்.",
     "Use current GPS location": "தற்போதைய ஜிபிஎஸ் இருப்பிடத்தைப் பயன்படுத்தவும்",
@@ -1113,7 +1118,8 @@
     "Saved weather data has no usable measurements.": "சேமிக்கப்பட்ட வானிலை தரவு பயன்படுத்தக்கூடிய அளவீடுகள் இல்லை.",
     "Too many requests. Please wait before trying again.": "பல கோரிக்கைகள். மீண்டும் முயற்சிக்கும் முன் காத்திருக்கவும்.",
     "The request could not be completed.": "கோரிக்கையை முடிக்க முடியவில்லை.",
-    "Analyzing current weather…": "???????? ?????? ????? ????????????????"
+    "Analyzing current weather…": "???????? ?????? ????? ????????????????",
+    "Available — validated model ready": "கிடைக்கிறது — சரிபார்க்கப்பட்ட மாதிரி தயார்"
   },
   "ur": {
     "&nbsp;·&nbsp;": " · ",
@@ -1219,7 +1225,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "یہ کوئی تشخیص نہیں ہے۔ کیمیکل لگانے سے پہلے مقامی زرعی توسیعی افسر سے مشتبہ بیماری کی تصدیق کریں۔",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "یہ واحد پڑھنا رہنمائی میں مخصوص مورچا کی نگرانی کی حد سے میل نہیں کھاتا ہے۔ یہ بیماری کو مسترد نہیں کر سکتا.",
     "Toggle navigation": "نیویگیشن ٹوگل کریں۔",
-    "Unavailable — validated model required": "دستیاب نہیں — توثیق شدہ ماڈل درکار ہے۔",
+    "Unavailable — validated model required": "دستیاب — تصدیق شدہ ماڈل تیار ہے",
     "Upload leaf photograph · Grad-CAM++ explanation": "لیف فوٹو اپ لوڈ کریں · Grad-CAM++ وضاحت",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "بیماری سے پاک نرسریوں سے تصدیق شدہ بیج استعمال کریں۔ 30 منٹ کے لیے 52 ° C پر گرم پانی سے سیٹوں کا علاج کریں۔ مزاحمتی اقسام کا انتخاب کریں (مثلاً Co 86032, Co 09004, Co 11015)۔ متاثرہ کھیتوں میں مسلسل ریٹوننگ سے گریز کریں۔",
     "Use current GPS location": "موجودہ GPS مقام استعمال کریں۔",
@@ -1299,7 +1305,8 @@
     "Saved weather data has no usable measurements.": "محفوظ کردہ موسمی ڈیٹا کی کوئی قابل استعمال پیمائش نہیں ہے۔",
     "Too many requests. Please wait before trying again.": "بہت زیادہ درخواستیں دوبارہ کوشش کرنے سے پہلے براہ کرم انتظار کریں۔",
     "The request could not be completed.": "درخواست مکمل نہیں ہو سکی۔",
-    "Analyzing current weather…": "?????? ???? ?? ????? ??? ?? ??? ???"
+    "Analyzing current weather…": "?????? ???? ?? ????? ??? ?? ??? ???",
+    "Available — validated model ready": "دستیاب — تصدیق شدہ ماڈل تیار ہے"
   },
   "gu": {
     "&nbsp;·&nbsp;": " · ",
@@ -1405,7 +1412,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "આ કોઈ નિદાન નથી. રસાયણો લાગુ કરતાં પહેલાં સ્થાનિક કૃષિ વિસ્તરણ અધિકારી સાથે શંકાસ્પદ રોગની પુષ્ટિ કરો.",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "આ એકલ વાંચન માર્ગદર્શનમાં ચોક્કસ રસ્ટ-મોનિટરિંગ શ્રેણી સાથે મેળ ખાતું નથી; તે રોગને નકારી શકે નહીં.",
     "Toggle navigation": "નેવિગેશન ટૉગલ કરો",
-    "Unavailable — validated model required": "અનુપલબ્ધ — માન્ય મોડલ આવશ્યક છે",
+    "Unavailable — validated model required": "ઉપલબ્ધ — માન્ય મોડેલ તૈયાર છે",
     "Upload leaf photograph · Grad-CAM++ explanation": "લીફ ફોટોગ્રાફ અપલોડ કરો · Grad-CAM++ સમજૂતી",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "રોગમુક્ત નર્સરીમાંથી પ્રમાણિત બિયારણનો ઉપયોગ કરો. 30 મિનિટ માટે 52 ડિગ્રી સેલ્સિયસ પર ગરમ પાણીથી સેટ્સની સારવાર કરો. પ્રતિરોધક જાતો પસંદ કરો (દા.ત., Co 86032, Co 09004, Co 11015). ચેપગ્રસ્ત ખેતરોમાં સતત રેટૂનિંગ કરવાનું ટાળો.",
     "Use current GPS location": "વર્તમાન GPS સ્થાનનો ઉપયોગ કરો",
@@ -1485,7 +1492,8 @@
     "Saved weather data has no usable measurements.": "સાચવેલ હવામાન ડેટામાં કોઈ ઉપયોગી માપન નથી.",
     "Too many requests. Please wait before trying again.": "ઘણી બધી વિનંતીઓ. ફરી પ્રયાસ કરતા પહેલા કૃપા કરીને રાહ જુઓ.",
     "The request could not be completed.": "વિનંતી પૂર્ણ કરી શકાઈ નથી.",
-    "Analyzing current weather…": "????? ????????? ???????? ?? ?????? ???"
+    "Analyzing current weather…": "????? ????????? ???????? ?? ?????? ???",
+    "Available — validated model ready": "ઉપલબ્ધ — માન્ય મોડેલ તૈયાર છે"
   },
   "kn": {
     "&nbsp;·&nbsp;": " · ",
@@ -1591,7 +1599,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "ಇದು ರೋಗನಿರ್ಣಯವಲ್ಲ. ರಾಸಾಯನಿಕಗಳನ್ನು ಅನ್ವಯಿಸುವ ಮೊದಲು ಸ್ಥಳೀಯ ಕೃಷಿ ವಿಸ್ತರಣಾ ಅಧಿಕಾರಿಯೊಂದಿಗೆ ಶಂಕಿತ ರೋಗವನ್ನು ದೃಢೀಕರಿಸಿ.",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "ಈ ಒಂದೇ ಓದುವಿಕೆ ಮಾರ್ಗದರ್ಶನದಲ್ಲಿನ ನಿರ್ದಿಷ್ಟ ತುಕ್ಕು-ಮೇಲ್ವಿಚಾರಣಾ ಶ್ರೇಣಿಗೆ ಹೊಂದಿಕೆಯಾಗುವುದಿಲ್ಲ; ಇದು ರೋಗವನ್ನು ತಳ್ಳಿಹಾಕಲು ಸಾಧ್ಯವಿಲ್ಲ.",
     "Toggle navigation": "ನ್ಯಾವಿಗೇಶನ್ ಅನ್ನು ಟಾಗಲ್ ಮಾಡಿ",
-    "Unavailable — validated model required": "ಲಭ್ಯವಿಲ್ಲ - ಮೌಲ್ಯೀಕರಿಸಿದ ಮಾದರಿ ಅಗತ್ಯವಿದೆ",
+    "Unavailable — validated model required": "ಲಭ್ಯವಿದೆ — ಮೌಲ್ಯೀಕರಿಸಿದ ಮಾದರಿ ಸಿದ್ಧವಾಗಿದೆ",
     "Upload leaf photograph · Grad-CAM++ explanation": "ಎಲೆಯ ಛಾಯಾಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ · Grad-CAM++ ವಿವರಣೆ",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "ರೋಗ-ಮುಕ್ತ ನರ್ಸರಿಗಳಿಂದ ಪ್ರಮಾಣೀಕೃತ ಬೀಜ ಸೆಟ್‌ಗಳನ್ನು ಬಳಸಿ. 30 ನಿಮಿಷಗಳ ಕಾಲ 52 ° C ನಲ್ಲಿ ಬಿಸಿನೀರಿನೊಂದಿಗೆ ಸೆಟ್ಗಳನ್ನು ಚಿಕಿತ್ಸೆ ಮಾಡಿ. ನಿರೋಧಕ ಪ್ರಭೇದಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ (ಉದಾ., Co 86032, Co 09004, Co 11015). ಸೋಂಕಿತ ಕ್ಷೇತ್ರಗಳಲ್ಲಿ ನಿರಂತರ ರಾಟೂನಿಂಗ್ ಅನ್ನು ತಪ್ಪಿಸಿ.",
     "Use current GPS location": "ಪ್ರಸ್ತುತ GPS ಸ್ಥಳವನ್ನು ಬಳಸಿ",
@@ -1671,7 +1679,8 @@
     "Saved weather data has no usable measurements.": "ಉಳಿಸಿದ ಹವಾಮಾನ ಡೇಟಾ ಯಾವುದೇ ಬಳಸಬಹುದಾದ ಅಳತೆಗಳನ್ನು ಹೊಂದಿಲ್ಲ.",
     "Too many requests. Please wait before trying again.": "ಹಲವಾರು ವಿನಂತಿಗಳು. ಮತ್ತೊಮ್ಮೆ ಪ್ರಯತ್ನಿಸುವ ಮೊದಲು ದಯವಿಟ್ಟು ನಿರೀಕ್ಷಿಸಿ.",
     "The request could not be completed.": "ವಿನಂತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಲಾಗಲಿಲ್ಲ.",
-    "Analyzing current weather…": "???????? ??????????? ????????????????????"
+    "Analyzing current weather…": "???????? ??????????? ????????????????????",
+    "Available — validated model ready": "ಲಭ್ಯವಿದೆ — ಮೌಲ್ಯೀಕರಿಸಿದ ಮಾದರಿ ಸಿದ್ಧವಾಗಿದೆ"
   },
   "or": {
     "&nbsp;·&nbsp;": " · ",
@@ -1777,7 +1786,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "ଏହା ଏକ ନିରାକରଣ ନୁହେଁ | ରାସାୟନିକ ପ୍ରୟୋଗ କରିବା ପୂର୍ବରୁ ସ୍ଥାନୀୟ କୃଷି ସମ୍ପ୍ରସାରଣ ଅଧିକାରୀଙ୍କ ସହିତ ସନ୍ଦେହଜନକ ରୋଗ ନିଶ୍ଚିତ କରନ୍ତୁ |",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "ଏହି ଏକକ ପଠନ ନିର୍ଦ୍ଦେଶନାରେ ନିର୍ଦ୍ଦିଷ୍ଟ କଳଙ୍କ-ମନିଟରିଂ ପରିସର ସହିତ ମେଳ ଖାଉ ନାହିଁ | ଏହା ରୋଗକୁ ନିୟନ୍ତ୍ରଣ କରିପାରିବ ନାହିଁ |",
     "Toggle navigation": "ନାଭିଗେସନ୍ ଟୋଗଲ୍ କରନ୍ତୁ |",
-    "Unavailable — validated model required": "ଉପଲବ୍ଧ ନାହିଁ - ବ valid ଧ ମଡେଲ ଆବଶ୍ୟକ |",
+    "Unavailable — validated model required": "ଉପଲବ୍ଧ — ବୈଧ ମଡେଲ ପ୍ରସ୍ତୁତ",
     "Upload leaf photograph · Grad-CAM++ explanation": "ପତ୍ର ଫଟୋଗ୍ରାଫ୍ ଅପଲୋଡ୍ କରନ୍ତୁ · ଗ୍ରେଡ୍- CAM ++ ବ୍ୟାଖ୍ୟା |",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "ରୋଗମୁକ୍ତ ନର୍ସରୀରୁ ପ୍ରମାଣିତ ବିହନ ସେଟ୍ ବ୍ୟବହାର କରନ୍ତୁ | 30 ମିନିଟ୍ ପାଇଁ 52 ° C ରେ ଗରମ ପାଣି ସହିତ ସେଟଗୁଡିକୁ ଚିକିତ୍ସା କରନ୍ତୁ | ପ୍ରତିରୋଧକ ପ୍ରକାରଗୁଡିକ ବାଛନ୍ତୁ (ଯଥା, Co 86032, Co 09004, Co 11015) | ସଂକ୍ରମିତ କ୍ଷେତ୍ରରେ କ୍ରମାଗତ ରେଟୁନିଂରୁ ଦୂରେଇ ରୁହନ୍ତୁ |",
     "Use current GPS location": "ସାମ୍ପ୍ରତିକ GPS ଅବସ୍ଥାନ ବ୍ୟବହାର କରନ୍ତୁ |",
@@ -1857,7 +1866,8 @@
     "Saved weather data has no usable measurements.": "ସଞ୍ଚିତ ପାଣିପାଗ ତଥ୍ୟର କ us ଣସି ବ୍ୟବହାର ଯୋଗ୍ୟ ମାପ ନାହିଁ |",
     "Too many requests. Please wait before trying again.": "ବହୁତ ଅନୁରୋଧ | ପୁନର୍ବାର ଚେଷ୍ଟା କରିବା ପୂର୍ବରୁ ଦୟାକରି ଅପେକ୍ଷା କରନ୍ତୁ |",
     "The request could not be completed.": "ଅନୁରୋଧ ସମାପ୍ତ ହୋଇପାରିଲା ନାହିଁ |",
-    "Analyzing current weather…": "?????????? ??????? ???????? ??????"
+    "Analyzing current weather…": "?????????? ??????? ???????? ??????",
+    "Available — validated model ready": "ଉପଲବ୍ଧ — ବୈଧ ମଡେଲ ପ୍ରସ୍ତୁତ"
   },
   "ml": {
     "&nbsp;·&nbsp;": " · ",
@@ -1963,7 +1973,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "ഇതൊരു രോഗനിർണയമല്ല. രാസവസ്തുക്കൾ പ്രയോഗിക്കുന്നതിന് മുമ്പ് പ്രാദേശിക കാർഷിക വിപുലീകരണ ഓഫീസറുമായി സംശയാസ്പദമായ രോഗം സ്ഥിരീകരിക്കുക.",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "ഈ ഒറ്റവായന, മാർഗ്ഗനിർദ്ദേശത്തിലെ പ്രത്യേക തുരുമ്പ് നിരീക്ഷണ ശ്രേണിയുമായി പൊരുത്തപ്പെടുന്നില്ല; അതിന് രോഗത്തെ തള്ളിക്കളയാനാവില്ല.",
     "Toggle navigation": "നാവിഗേഷൻ ടോഗിൾ ചെയ്യുക",
-    "Unavailable — validated model required": "ലഭ്യമല്ല - സാധൂകരിച്ച മോഡൽ ആവശ്യമാണ്",
+    "Unavailable — validated model required": "ലഭ്യമാണ് — സാധൂകരിച്ച മോഡൽ തയ്യാറാണ്",
     "Upload leaf photograph · Grad-CAM++ explanation": "ഇല ഫോട്ടോ അപ്‌ലോഡ് ചെയ്യുക · Grad-CAM++ വിശദീകരണം",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "രോഗബാധയില്ലാത്ത നഴ്സറികളിൽ നിന്ന് സാക്ഷ്യപ്പെടുത്തിയ വിത്ത് സെറ്റുകൾ ഉപയോഗിക്കുക. 52 ഡിഗ്രി സെൽഷ്യസിൽ 30 മിനിറ്റ് ചൂടുവെള്ളം ഉപയോഗിച്ച് സെറ്റുകൾ കൈകാര്യം ചെയ്യുക. പ്രതിരോധശേഷിയുള്ള ഇനങ്ങൾ തിരഞ്ഞെടുക്കുക (ഉദാ. കോ 86032, കോ 09004, കോ 11015). രോഗബാധയുള്ള പാടങ്ങളിൽ തുടർച്ചയായി റട്ടൂണിംഗ് ഒഴിവാക്കുക.",
     "Use current GPS location": "നിലവിലെ GPS ലൊക്കേഷൻ ഉപയോഗിക്കുക",
@@ -2043,7 +2053,8 @@
     "Saved weather data has no usable measurements.": "സംരക്ഷിച്ച കാലാവസ്ഥാ ഡാറ്റയ്ക്ക് ഉപയോഗയോഗ്യമായ അളവുകളൊന്നുമില്ല.",
     "Too many requests. Please wait before trying again.": "വളരെയധികം അഭ്യർത്ഥനകൾ. വീണ്ടും ശ്രമിക്കുന്നതിന് മുമ്പ് ദയവായി കാത്തിരിക്കുക.",
     "The request could not be completed.": "അഭ്യർത്ഥന പൂർത്തിയാക്കാൻ കഴിഞ്ഞില്ല.",
-    "Analyzing current weather…": "??????? ???????? ??????? ???????????"
+    "Analyzing current weather…": "??????? ???????? ??????? ???????????",
+    "Available — validated model ready": "ലഭ്യമാണ് — സാധൂകരിച്ച മോഡൽ തയ്യാറാണ്"
   },
   "pa": {
     "&nbsp;·&nbsp;": " · ",
@@ -2149,7 +2160,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "ਇਹ ਨਿਦਾਨ ਨਹੀਂ ਹੈ। ਰਸਾਇਣ ਲਗਾਉਣ ਤੋਂ ਪਹਿਲਾਂ ਕਿਸੇ ਸਥਾਨਕ ਖੇਤੀਬਾੜੀ ਵਿਸਥਾਰ ਅਫਸਰ ਨਾਲ ਸ਼ੱਕੀ ਬਿਮਾਰੀ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ।",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "ਇਹ ਸਿੰਗਲ ਰੀਡਿੰਗ ਮਾਰਗਦਰਸ਼ਨ ਵਿੱਚ ਖਾਸ ਜੰਗਾਲ-ਨਿਗਰਾਨੀ ਸੀਮਾ ਨਾਲ ਮੇਲ ਨਹੀਂ ਖਾਂਦੀ; ਇਹ ਬਿਮਾਰੀ ਤੋਂ ਇਨਕਾਰ ਨਹੀਂ ਕਰ ਸਕਦਾ।",
     "Toggle navigation": "ਨੈਵੀਗੇਸ਼ਨ ਨੂੰ ਟੌਗਲ ਕਰੋ",
-    "Unavailable — validated model required": "ਅਣਉਪਲਬਧ — ਪ੍ਰਮਾਣਿਤ ਮਾਡਲ ਦੀ ਲੋੜ ਹੈ",
+    "Unavailable — validated model required": "ਉਪਲਬਧ — ਪ੍ਰਮਾਣਿਤ ਮਾਡਲ ਤਿਆਰ ਹੈ",
     "Upload leaf photograph · Grad-CAM++ explanation": "ਪੱਤੇ ਦੀ ਫੋਟੋ ਅੱਪਲੋਡ ਕਰੋ · ਗ੍ਰੇਡ-ਸੀਏਐਮ++ ਵਿਆਖਿਆ",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "ਰੋਗ ਮੁਕਤ ਨਰਸਰੀਆਂ ਤੋਂ ਪ੍ਰਮਾਣਿਤ ਬੀਜ ਸੈੱਟਾਂ ਦੀ ਵਰਤੋਂ ਕਰੋ। 30 ਮਿੰਟਾਂ ਲਈ 52 ਡਿਗਰੀ ਸੈਲਸੀਅਸ 'ਤੇ ਗਰਮ ਪਾਣੀ ਨਾਲ ਸੈੱਟਾਂ ਦਾ ਇਲਾਜ ਕਰੋ। ਰੋਧਕ ਕਿਸਮਾਂ ਦੀ ਚੋਣ ਕਰੋ (ਜਿਵੇਂ ਕਿ, ਸੀ.ਓ. 86032, ਕੋ. 09004, ਕੋ. 11015)। ਲਾਗ ਵਾਲੇ ਖੇਤਾਂ ਵਿੱਚ ਲਗਾਤਾਰ ਰੇਟੂਨਿੰਗ ਤੋਂ ਬਚੋ।",
     "Use current GPS location": "ਮੌਜੂਦਾ GPS ਟਿਕਾਣਾ ਵਰਤੋ",
@@ -2229,7 +2240,8 @@
     "Saved weather data has no usable measurements.": "ਸੁਰੱਖਿਅਤ ਮੌਸਮ ਡੇਟਾ ਦਾ ਕੋਈ ਉਪਯੋਗੀ ਮਾਪ ਨਹੀਂ ਹੈ।",
     "Too many requests. Please wait before trying again.": "ਬਹੁਤ ਸਾਰੀਆਂ ਬੇਨਤੀਆਂ। ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਕਿਰਪਾ ਕਰਕੇ ਉਡੀਕ ਕਰੋ।",
     "The request could not be completed.": "ਬੇਨਤੀ ਪੂਰੀ ਨਹੀਂ ਕੀਤੀ ਜਾ ਸਕੀ।",
-    "Analyzing current weather…": "?????? ???? ?? ????????? ???? ?? ???? ???"
+    "Analyzing current weather…": "?????? ???? ?? ????????? ???? ?? ???? ???",
+    "Available — validated model ready": "ਉਪਲਬਧ — ਪ੍ਰਮਾਣਿਤ ਮਾਡਲ ਤਿਆਰ ਹੈ"
   },
   "as": {
     "&nbsp;·&nbsp;": " · ",
@@ -2335,7 +2347,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "এইটো কোনো নিদান নহয়। ৰাসায়নিক পদাৰ্থ প্ৰয়োগ কৰাৰ আগতে স্থানীয় কৃষি সম্প্ৰসাৰণ বিষয়াৰ সৈতে সন্দেহযুক্ত ৰোগ নিশ্চিত কৰক।",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "এই একক পঢ়াটো নিৰ্দেশনাত থকা নিৰ্দিষ্ট মৰিছা-নিৰীক্ষণ পৰিসৰৰ সৈতে মিল নাথাকে; ই ৰোগটোক নুই কৰিব নোৱাৰে।",
     "Toggle navigation": "নেভিগেচন টগল কৰক",
-    "Unavailable — validated model required": "উপলব্ধ নহয় — বৈধ আৰ্হিৰ প্ৰয়োজন",
+    "Unavailable — validated model required": "উপলব্ধ — বৈধ মডেল প্ৰস্তুত",
     "Upload leaf photograph · Grad-CAM++ explanation": "পাতৰ ফটো আপলোড কৰক · Grad-CAM++ ব্যাখ্যা",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "ৰোগমুক্ত নাৰ্চাৰীৰ পৰা প্ৰমাণিত বীজৰ গোট ব্যৱহাৰ কৰক। চেটবোৰ ৫২ ডিগ্ৰী চেলছিয়াছত গৰম পানীৰে ৩০ মিনিটৰ বাবে শোধন কৰক। প্ৰতিৰোধী জাত নিৰ্বাচন কৰক (যেনে, Co 86032, Co 09004, Co 11015)। সংক্ৰমিত পথাৰত অবিৰত ৰেটুনিং এৰক।",
     "Use current GPS location": "বৰ্তমানৰ জিপিএছ অৱস্থান ব্যৱহাৰ কৰক",
@@ -2415,7 +2427,8 @@
     "Saved weather data has no usable measurements.": "সংৰক্ষিত বতৰৰ তথ্যৰ কোনো ব্যৱহাৰযোগ্য জোখ-মাখ নাই।",
     "Too many requests. Please wait before trying again.": "বহুত বেছি অনুৰোধ। অনুগ্ৰহ কৰি পুনৰ চেষ্টা কৰাৰ আগতে অপেক্ষা কৰক।",
     "The request could not be completed.": "অনুৰোধ সম্পূৰ্ণ কৰিব পৰা নগ'ল।",
-    "Analyzing current weather…": "??????? ??? ???????? ??? ?????"
+    "Analyzing current weather…": "??????? ??? ???????? ??? ?????",
+    "Available — validated model ready": "উপলব্ধ — বৈধ মডেল প্ৰস্তুত"
   },
   "mai": {
     "&nbsp;·&nbsp;": " · २. ",
@@ -2521,7 +2534,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "ई कोनो निदान नहि थिक। रसायन लगावय सं पहिले स्थानीय कृषि विस्तार अधिकारी सं संदिग्ध बीमारी कें पुष्टि करूं.",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "ई एकल रीडिंग मार्गदर्शन मे विशिष्ट जंग-निगरानी सीमा सं मेल नहि खाइत अछि; ई बीमारी के खारिज नै क सकैत अछि।",
     "Toggle navigation": "नेविगेशन टॉगल करू",
-    "Unavailable — validated model required": "अनुपलब्ध — मान्य मॉडल आवश्यक",
+    "Unavailable — validated model required": "उपलब्ध — मान्य मॉडल तैयार",
     "Upload leaf photograph · Grad-CAM++ explanation": "पत्ता फोटो अपलोड करू · Grad-CAM++ व्याख्या",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "रोग मुक्त नर्सरी सं प्रमाणित बीज सेट कें उपयोग करूं. सेट कें 52 डिग्री सेल्सियस पर 30 मिनट तइक गरम पानी सं इलाज करूं. प्रतिरोधी किस्मक कें चयन करूं (जैना, सह 86032, सह 09004, सह 11015)। संक्रमित खेत मे लगातार रेटूनिंग सं बचूं.",
     "Use current GPS location": "वर्तमान जीपीएस स्थान के प्रयोग करू",
@@ -2601,7 +2614,8 @@
     "Saved weather data has no usable measurements.": "सहेजल गेल मौसमक आंकड़ा मे कोनो उपयोगी माप नहि अछि ।",
     "Too many requests. Please wait before trying again.": "बहुत बेसी आग्रह। कृपया फेरसँ प्रयास करबासँ पहिने प्रतीक्षा करू.",
     "The request could not be completed.": "अनुरोध पूरा नहि भ सकल।",
-    "Analyzing current weather…": "??????? ????? ???????? ?? ??? ????"
+    "Analyzing current weather…": "??????? ????? ???????? ?? ??? ????",
+    "Available — validated model ready": "उपलब्ध — मान्य मॉडल तैयार"
   },
   "sa": {
     "&nbsp;·&nbsp;": " · २. ",
@@ -2707,7 +2721,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "एतत् निदानं न भवति। रसायनानि प्रयोक्तुं पूर्वं स्थानीयकृषिविस्तारपदाधिकारिणा सह संदिग्धरोगस्य पुष्टिं कुर्वन्तु।",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "इदं एकं पठनं मार्गदर्शने विशिष्टजङ्गम-निरीक्षण-परिधिना सह न मेलति; रोगं निराकरणं कर्तुं न शक्नोति।",
     "Toggle navigation": "नेविगेशनं टॉगल कुर्वन्तु",
-    "Unavailable — validated model required": "अनुपलब्धम् — प्रमाणीकृतं प्रतिरूपम् आवश्यकम्",
+    "Unavailable — validated model required": "उपलब्धम् — प्रमाणीकृतं प्रतिरूपम् सज्जम्",
     "Upload leaf photograph · Grad-CAM++ explanation": "पत्रस्य छायाचित्रं अपलोड् कुर्वन्तु · Grad-CAM++ व्याख्या",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "रोगरहितनर्सरीतः प्रमाणितबीजसमूहानां उपयोगं कुर्वन्तु। सेट्-स्थानानि उष्णजलेन ५२°C मध्ये ३० निमेषान् यावत् उपचारं कुर्वन्तु । प्रतिरोधी प्रजातीनां चयनं कुर्वन्तु (उदा., Co 86032, Co 09004, Co 11015)। संक्रमितक्षेत्रेषु निरन्तरं रेटूनिंग् परिहरन्तु।",
     "Use current GPS location": "वर्तमान GPS स्थानस्य उपयोगं कुर्वन्तु",
@@ -2787,7 +2801,8 @@
     "Saved weather data has no usable measurements.": "रक्षितेषु मौसमदत्तांशेषु उपयोगयोग्यं मापनं नास्ति ।",
     "Too many requests. Please wait before trying again.": "अतिशयेन अनुरोधाः। पुनः प्रयासं कर्तुं पूर्वं प्रतीक्ष्यताम् ।",
     "The request could not be completed.": "अनुरोधः पूर्णः कर्तुं न शक्यते स्म ।",
-    "Analyzing current weather…": "?????????? ???????????? ????????? ????????"
+    "Analyzing current weather…": "?????????? ???????????? ????????? ????????",
+    "Available — validated model ready": "उपलब्धम् — प्रमाणीकृतं प्रतिरूपम् सज्जम्"
   },
   "ks": {
     "&nbsp;·&nbsp;": " · ",
@@ -2893,7 +2908,7 @@
     "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.": "یہ کوئی تشخیص نہیں ہے۔ کیمیکل لگانے سے پہلے مقامی زرعی توسیعی افسر سے مشتبہ بیماری کی تصدیق کریں۔",
     "This single reading does not match the specific rust-monitoring range in the guidance; it cannot rule the disease out.": "یہ واحد پڑھنا رہنمائی میں مخصوص مورچا کی نگرانی کی حد سے میل نہیں کھاتا ہے۔ یہ بیماری کو مسترد نہیں کر سکتا.",
     "Toggle navigation": "نیویگیشن ٹوگل کریں۔",
-    "Unavailable — validated model required": "دستیاب نہیں — توثیق شدہ ماڈل درکار ہے۔",
+    "Unavailable — validated model required": "دستیاب — تصدیق شدہ ماڈل تیار چھُ",
     "Upload leaf photograph · Grad-CAM++ explanation": "لیف فوٹو اپ لوڈ کریں · Grad-CAM++ وضاحت",
     "Use certified seed setts from disease-free nurseries. Treat setts with hot water at 52°C for 30 minutes. Select resistant varieties (e.g., Co 86032, Co 09004, Co 11015). Avoid continuous ratooning in infected fields.": "بیماری سے پاک نرسریوں سے تصدیق شدہ بیج استعمال کریں۔ 30 منٹ کے لیے 52 ° C پر گرم پانی سے سیٹوں کا علاج کریں۔ مزاحمتی اقسام کا انتخاب کریں (مثلاً Co 86032, Co 09004, Co 11015)۔ متاثرہ کھیتوں میں مسلسل ریٹوننگ سے گریز کریں۔",
     "Use current GPS location": "موجودہ GPS مقام استعمال کریں۔",
@@ -2973,6 +2988,7 @@
     "Saved weather data has no usable measurements.": "محفوظ کردہ موسمی ڈیٹا کی کوئی قابل استعمال پیمائش نہیں ہے۔",
     "Too many requests. Please wait before trying again.": "بہت زیادہ درخواستیں دوبارہ کوشش کرنے سے پہلے براہ کرم انتظار کریں۔",
     "The request could not be completed.": "درخواست مکمل نہیں ہو سکی۔",
-    "Analyzing current weather…": "?????? ?????? ????? ??????"
+    "Analyzing current weather…": "?????? ?????? ????? ??????",
+    "Available — validated model ready": "دستیاب — تصدیق شدہ ماڈل تیار چھُ"
   }
 }

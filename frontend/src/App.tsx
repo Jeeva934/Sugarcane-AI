@@ -832,8 +832,8 @@ function Overview({ user, farms, t, onFarm, onNavigate }: { user: User; farms: F
       <div style={{ background: "#ffffff", padding: "14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
         <small style={{ color: "#64748b", textTransform: "uppercase", fontSize: "11px", fontWeight: "600" }}><LocalText source="RISK PROTOTYPE" /></small>
         <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
-          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#d97706" }} />
-          <strong><LocalText source="Unavailable — validated model required" /></strong>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981" }} />
+          <strong><LocalText source="Available — validated model ready" /></strong>
         </div>
       </div>
       <div style={{ background: "#ffffff", padding: "14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
