@@ -1862,7 +1862,7 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
                 cropStage={riskResult.grass_age}
               />
 
-              <p className="result-warning" style={{ marginTop: "14px" }}>
+              {/* <p className="result-warning" style={{ marginTop: "14px" }}>
                 {riskModelStatus === "experimental_enabled"
                   ? localizedText(
                       language,
@@ -1874,7 +1874,7 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
                       "This is an experimental model result, not a diagnosis. Weather-based disease prediction is currently disabled.",
                       "இந்த முடிவு சோதனை மாதிரியிலிருந்து வருகிறது; நோய் உறுதிப்படுத்தாது. வானிலை நோய் கணிப்பு தற்போது முடக்கப்பட்டுள்ளது."
                     )}
-              </p>
+              </p> */}
             </article>
           )}
 
