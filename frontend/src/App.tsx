@@ -1528,7 +1528,7 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
       <div className="risk-split-layout">
         {/* LEFT COLUMN: Sticky options & farm conditions */}
         <div className="risk-left-sticky">
-          {riskModelStatus !== "experimental_enabled" && (
+          {riskModelStatus !== "experimental_enabled" ? (
             <p className="form-error" role="status" style={{ marginBottom: "16px" }}>
               <LocalText source={riskModelStatus === "checking"
                 ? "Checking per-disease environmental model availability…"
@@ -1536,6 +1536,16 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
                   ? "No verified real-world training data is available, so disease-risk predictions are turned off. Synthetic demo data is not used for predictions. Weather readings below are for monitoring only."
                   : "No trained per-disease environmental model artifact is available. Synthetic demo data is not used for predictions. Weather readings below are for monitoring only; no disease score has been generated."} />
             </p>
+          ) : (
+            <div style={{ marginBottom: "16px", padding: "10px 14px", borderRadius: "8px", background: "#f0fdf4", border: "1px solid #86efac", display: "flex", alignItems: "center", gap: "8px", color: "#166534" }}>
+              <ShieldCheck size={18} />
+              <div style={{ fontSize: "12px" }}>
+                <strong>{localizedText(language, "Experimental XGBoost Risk Model Active", "சோதனை XGBoost மாதிரி செயல்படுகிறது")}</strong>
+                <p style={{ margin: "2px 0 0", color: "#14532d" }}>
+                  {localizedText(language, "7-day rolling microclimate disease forecasting enabled.", "7-நாள் வானிலை அடிப்படையிலான நோய் அபாயக் கணிப்பு இயக்கப்பட்டுள்ளது.")}
+                </p>
+              </div>
+            </div>
           )}
 
           <label className="field-label" htmlFor="risk-farm" style={{ marginTop: 0 }}>{t.selectFarm}</label>
@@ -1853,7 +1863,17 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
               />
 
               <p className="result-warning" style={{ marginTop: "14px" }}>
-                {localizedText(language, "This is an experimental model result, not a diagnosis. Weather-based disease prediction is currently disabled.", "இந்த முடிவு சோதனை மாதிரியிலிருந்து வருகிறது; நோய் உறுதிப்படுத்தாது. வானிலை நோய் கணிப்பு தற்போது முடக்கப்பட்டுள்ளது.")}
+                {riskModelStatus === "experimental_enabled"
+                  ? localizedText(
+                      language,
+                      "This is an experimental model result, not a definitive diagnosis. Always inspect crop symptoms directly in the field before taking farm actions.",
+                      "இது ஒரு சோதனை மாதிரி மதிப்பீடு; நேரடி நோய் உறுதி அல்ல. வயல் நடவடிக்கைகளுக்கு முன் பயிர் அறிகுறிகளை நேரடியாக ஆய்வு செய்யவும்."
+                    )
+                  : localizedText(
+                      language,
+                      "This is an experimental model result, not a diagnosis. Weather-based disease prediction is currently disabled.",
+                      "இந்த முடிவு சோதனை மாதிரியிலிருந்து வருகிறது; நோய் உறுதிப்படுத்தாது. வானிலை நோய் கணிப்பு தற்போது முடக்கப்பட்டுள்ளது."
+                    )}
               </p>
             </article>
           )}
