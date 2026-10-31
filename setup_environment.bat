@@ -58,3 +58,4 @@ echo.
 echo To start the application, simply double-click "start_project.bat"
 echo.
 pause
+

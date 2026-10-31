@@ -33,3 +33,4 @@ echo Frontend: http://localhost:5173
 echo.
 echo Keep both terminal windows open while using the application.
 echo.
+
