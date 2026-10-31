@@ -11,19 +11,29 @@ flowchart LR
   API -. explicit unavailable until validated artifacts .-> Image[YOLO / EfficientNetV2 / Grad-CAM++ adapter]
 ```
 
-The environmental and image modules are separate. No combined multimodal
-classifier is implemented. External weather data is fetched only for a farm
-whose user supplied coordinates; provider failure falls back to visibly cached
-observations and does not imply freshness.
+The environmental and image modules are separate for real inference. The
+development-only `/demo/fusion/predict` endpoint combines the EfficientNetV2
+image scores with explicitly synthetic XGBoost scores for demonstration; its
+late-fusion ranking, SHAP values, and ALE plot are not disease predictions and
+are never saved to prediction history. It is disabled in production. YOLO is
+not used because no suitable bounding-box training data or detector artifact is
+available, and the evaluated crop pipeline was rejected for field inference.
+Wilt is also omitted from the fused ranking because the image classifier has no
+matching Wilt class.
+
+External weather data is fetched only for a farm whose user supplied
+coordinates; provider failure falls back to visibly cached observations and
+does not imply freshness.
 
 ## Current implementation boundary
 
 Implemented: account registration/login/logout, secure cookie sessions,
 user-owned farms, current Open-Meteo observation retrieval and caching, reviewed
 knowledge CRUD API, bounded upload validation, rate limiting, health checks,
-history persistence, audit logging, history persistence, audit logging, account deletion, and explicit model-unavailable responses.
+history persistence, audit logging, account deletion, and explicit
+model-unavailable responses.
 
-Not implemented: validated environmental-risk or image model inference, explainability generation,
+Not implemented: validated environmental-risk inference, YOLO detector inference, production late fusion,
 historical weather backfill, persistent image/object storage, password reset,
 production account-management UI beyond deletion, PWA/offline inference,
 production-grade distributed rate limiting, and full frontend test suite.

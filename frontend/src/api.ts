@@ -118,6 +118,39 @@ export type RiskResult = {
   saved_to_history?: boolean;
 };
 
+export type SyntheticFusionDemoResult = {
+  status: "synthetic_demo_only";
+  synthetic_demo_only: true;
+  ranked_scores: {
+    disease_class: string;
+    image_score: number;
+    synthetic_environment_score: number;
+    demo_fusion_score: number;
+  }[];
+  not_fused_classes: Record<string, string>;
+  explanation_disease: string;
+  shap_drivers: RiskDriver[];
+  ale_plot_base64: string;
+  warning: string;
+  image: {
+    predicted_class: string;
+    uncalibrated_score: number;
+    class_scores: Record<string, number>;
+    heatmap_base64: string | null;
+    model_version: string;
+  };
+  detector: {
+    status: "not_used";
+    message: string;
+  };
+  weather: {
+    source: string;
+    observed_at: string;
+    freshness: "current" | "cached";
+  };
+  saved_to_history: false;
+};
+
 export type DiseaseObservationReport = {
   id: string;
   farm_id: string | null;

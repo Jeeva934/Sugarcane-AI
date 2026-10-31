@@ -2,12 +2,11 @@ import csv
 from datetime import datetime, timedelta, timezone
 from io import StringIO
 import math
-from pathlib import Path
 from time import perf_counter
 import logging
 
 import httpx
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from PIL import Image, UnidentifiedImageError
 from sqlalchemy import func, select
@@ -37,6 +36,10 @@ from app.schemas import (
 )
 from app.services.image_classifier import ImageModelUnavailable, classify_image
 from app.services.gemini_weather_guidance import WeatherGuidanceError, generate_weather_guidance
+from app.services.synthetic_demo_predictor import (
+    SyntheticDemoUnavailable,
+    run_synthetic_fusion_demo,
+)
 from app.services.verified_risk_predictor import (
     RiskModelUnavailable,
     has_any_model,
@@ -579,7 +582,7 @@ async def predict_risk(payload: RiskRequest, user: User = Depends(get_current_us
         )
     if farm.latitude is None or farm.longitude is None:
         raise HTTPException(status_code=422, detail="Add confirmed farm coordinates before requesting environmental risk.")
-    artifact_path = model_artifact_path(settings.risk_model_path, payload.disease_class)
+    artifact_path = model_artifact_path(str(settings.resolved_risk_model_path), payload.disease_class)
     if not artifact_path.is_file():
         raise HTTPException(
             status_code=503,
@@ -616,7 +619,7 @@ async def predict_risk(payload: RiskRequest, user: User = Depends(get_current_us
             predict_disease_presence,
             payload.disease_class,
             feature_values,
-            settings.risk_model_path,
+            str(settings.resolved_risk_model_path),
         )
     except RiskModelUnavailable as exc:
         raise HTTPException(status_code=503, detail={"code": "risk_model_unavailable", "message": str(exc)}) from exc
@@ -710,7 +713,7 @@ async def diagnose(
         image.verify()
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as exc:
         raise HTTPException(status_code=415, detail="Uploaded content is not a supported image.") from exc
-    if not settings.enable_experimental_image_model or not Path(settings.image_model_path).is_file():
+    if not settings.enable_experimental_image_model or not settings.resolved_image_model_path.is_file():
         raise HTTPException(status_code=503, detail={"code": "image_model_unavailable", "message": "The experimental image model is disabled or no validated artifact is configured. No diagnosis was generated.", "validation_ms": round((perf_counter() - started) * 1000)})
     try:
         result = await run_in_threadpool(classify_image, raw)
@@ -746,6 +749,95 @@ async def diagnose(
     db.refresh(record)
     result["saved_to_history"] = True
     return result
+
+
+@router.post("/demo/fusion/predict")
+async def synthetic_fusion_demo(
+    file: UploadFile = File(...),
+    farm_id: str = Form(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if settings.app_env.lower() == "production":
+        raise HTTPException(status_code=404, detail="Not found.")
+
+    farm = owned_farm(farm_id, user, db)
+    if farm.latitude is None or farm.longitude is None:
+        raise HTTPException(status_code=422, detail="Add confirmed farm GPS coordinates before running the demo.")
+    if not settings.enable_experimental_image_model or not settings.resolved_image_model_path.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "image_model_unavailable",
+                "message": "Configure and enable the EfficientNetV2 image artifact before running the demo.",
+            },
+        )
+
+    raw = await file.read(settings.max_upload_bytes + 1)
+    if len(raw) > settings.max_upload_bytes:
+        raise HTTPException(status_code=413, detail="Image exceeds the configured 10 MB limit.")
+    try:
+        image = Image.open(__import__("io").BytesIO(raw))
+        if image.width * image.height > 30_000_000:
+            raise HTTPException(status_code=415, detail="Image dimensions exceed the supported limit.")
+        image.verify()
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as exc:
+        raise HTTPException(status_code=415, detail="Uploaded content is not a supported image.") from exc
+
+    fresh_observation = fetch_current_weather(farm, db)
+    observation = fresh_observation
+    if observation is None:
+        observation = (cached_weather(farm.id, db, limit=1) or [None])[0]
+    if observation is None:
+        raise HTTPException(status_code=503, detail="Current weather is unavailable and no cached observation exists.")
+
+    feature_values = {
+        "soil_ph": farm.soil_ph,
+        "temperature_c": observation.temperature_mean,
+        "relative_humidity_pct": observation.relative_humidity,
+        "rainfall_mm": observation.precipitation,
+        "wind_speed_kmh": observation.wind_speed,
+        "dew_point_c": observation.dew_point,
+    }
+    if any(value is None for name, value in feature_values.items() if name != "soil_ph"):
+        raise HTTPException(status_code=503, detail="Required current weather measurements are unavailable.")
+
+    try:
+        image_result = await run_in_threadpool(classify_image, raw)
+        fusion_result = await run_in_threadpool(
+            run_synthetic_fusion_demo,
+            image_result["class_scores"],
+            feature_values,
+        )
+    except (ImageModelUnavailable, SyntheticDemoUnavailable) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "demo_unavailable", "message": str(exc)},
+        ) from exc
+    except Exception as exc:
+        logger.exception("Synthetic fusion demo failed")
+        raise HTTPException(status_code=500, detail="Synthetic demo encountered an internal error.") from exc
+
+    return {
+        **fusion_result,
+        "image": {
+            "predicted_class": image_result["predicted_class"],
+            "uncalibrated_score": image_result["uncalibrated_score"],
+            "class_scores": image_result["class_scores"],
+            "heatmap_base64": image_result["heatmap_base64"],
+            "model_version": image_result["model_version"],
+        },
+        "detector": {
+            "status": "not_used",
+            "message": "YOLO11 is not used: no suitable bounding-box training data or detector weights are present, and prior evaluation rejected the crop pipeline for field inference.",
+        },
+        "weather": {
+            "source": observation.source,
+            "observed_at": observation.observed_at,
+            "freshness": "current" if fresh_observation else "cached",
+        },
+        "saved_to_history": False,
+    }
 
 
 @router.get("/diagnosis/history")
@@ -958,22 +1050,23 @@ def live():
 def ready(db: Session = Depends(get_db)):
     image_model_status = (
         "experimental_enabled"
-        if settings.enable_experimental_image_model and Path(settings.image_model_path).is_file()
+        if settings.enable_experimental_image_model and settings.resolved_image_model_path.is_file()
         else "disabled" if not settings.enable_experimental_image_model else "unavailable"
     )
     risk_model_status = (
         "experimental_enabled"
-        if settings.enable_experimental_risk_model and has_any_model(settings.risk_model_path)
+        if settings.enable_experimental_risk_model and has_any_model(str(settings.resolved_risk_model_path))
         else "disabled" if not settings.enable_experimental_risk_model else "unavailable"
     )
     checks = {
         "database": "ok",
         "image_model": image_model_status,
+        "synthetic_demo": "disabled" if settings.app_env.lower() == "production" else "development_only",
         "risk_model": risk_model_status,
         "risk_models": {
             disease: (
                 "experimental_enabled"
-                if settings.enable_experimental_risk_model and has_model(settings.risk_model_path, disease)
+                if settings.enable_experimental_risk_model and has_model(str(settings.resolved_risk_model_path), disease)
                 else "disabled" if not settings.enable_experimental_risk_model else "unavailable"
             )
             for disease in ("Mosaic", "RedRot", "Rust", "Yellow", "Wilt")

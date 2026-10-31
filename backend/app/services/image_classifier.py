@@ -189,8 +189,9 @@ def classify_image(image_bytes: bytes) -> dict:
     if not settings.image_model_path:
         raise ImageModelUnavailable("No image model artifact is configured.")
 
+    model_path = str(settings.resolved_image_model_path)
     with _load_lock:
-        torch, model, preprocess, class_names, model_version = _load_model(settings.image_model_path)
+        torch, model, preprocess, class_names, model_version = _load_model(model_path)
     try:
         with Image.open(BytesIO(image_bytes)) as source:
             image = source.convert("RGB")
@@ -243,6 +244,7 @@ def classify_image(image_bytes: bytes) -> dict:
         "predicted_class": predicted_class,
         "uncalibrated_score": ranked[0]["uncalibrated_score"],
         "alternative_predictions": ranked[1:3],
+        "class_scores": {name: float(score) for name, score in zip(class_names, scores)},
         "model_version": model_version,
         "processing_time_ms": round((perf_counter() - started) * 1000),
         "explanation": "Grad-CAM++ visual heatmap highlights symptomatic leaf regions that drove the model prediction.",

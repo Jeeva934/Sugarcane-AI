@@ -14,6 +14,7 @@ from PIL import Image, ImageFilter
 import torch
 import torchvision.transforms as transforms
 import onnxruntime as ort
+import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "backend"))
@@ -27,13 +28,17 @@ from app.services.image_classifier import assess_image_quality, classify_image
 from app.db.session import SessionLocal
 from app.models import DiseaseKnowledge
 
-def test_offline_onnx_inference():
+def _run_offline_onnx_inference():
     print("\n--- 1. Testing Offline Inference: ONNX Runtime vs PyTorch ---")
     onnx_path = PROJECT_ROOT / "artifacts" / "image" / "efficientnet_v2_s.onnx"
     pt_path = PROJECT_ROOT / "artifacts" / "image" / "efficientnet_v2_s.pt"
     
-    assert onnx_path.exists(), f"ONNX model missing at {onnx_path}"
-    assert pt_path.exists(), f"PyTorch model missing at {pt_path}"
+    if not pt_path.exists():
+        pytest.skip(f"Optional trained image checkpoint is not available: {pt_path}")
+    if not onnx_path.exists():
+        from ml.export_onnx import export_checkpoint
+
+        export_checkpoint(pt_path, onnx_path)
 
     # Load ONNX session
     session = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
@@ -93,7 +98,14 @@ def test_offline_onnx_inference():
         "status": "passed"
     }
 
-def test_unsupported_and_degraded_images():
+
+def test_offline_onnx_inference():
+    result = _run_offline_onnx_inference()
+    assert result["status"] == "passed"
+    assert result["max_discrepancy"] < 1e-4
+
+
+def _run_unsupported_and_degraded_images():
     print("\n--- 2. Testing Unsupported, Corrupted & Degraded Images ---")
     results = {}
 
@@ -173,7 +185,17 @@ def test_unsupported_and_degraded_images():
     print("[PASS] Image quality checks, uncertainty & corrupted image rejection verified.")
     return results
 
-def test_missing_environmental_model_is_not_fabricated():
+
+def test_unsupported_and_degraded_images():
+    results = _run_unsupported_and_degraded_images()
+    assert results["blur_detection"]["status"] == "passed"
+    assert results["underexposed_detection"]["status"] == "passed"
+    assert results["overexposed_detection"]["status"] == "passed"
+    assert results["uncertainty_quantification"]["status"] == "passed"
+    assert results["corrupted_image_rejection"] == "passed"
+
+
+def _run_missing_environmental_model_is_not_fabricated():
     print("\n--- 3. Verifying missing environmental models never return synthetic scores ---")
     from app.services.verified_risk_predictor import RiskModelUnavailable, predict_disease_presence
 
@@ -193,7 +215,13 @@ def test_missing_environmental_model_is_not_fabricated():
         return {"status": "passed", "model_unavailable": True}
     raise AssertionError("A score was returned despite the missing trained artifact.")
 
-def test_translated_guidance_audit():
+
+def test_missing_environmental_model_is_not_fabricated():
+    result = _run_missing_environmental_model_is_not_fabricated()
+    assert result == {"status": "passed", "model_unavailable": True}
+
+
+def _run_translated_guidance_audit():
     print("\n--- 4. Auditing Disease Guidance: English vs Tamil Agronomic Translation ---")
     db = SessionLocal()
     try:
@@ -244,14 +272,21 @@ def test_translated_guidance_audit():
     finally:
         db.close()
 
+
+def test_translated_guidance_audit():
+    results = _run_translated_guidance_audit()
+    assert set(results) == {"Healthy", "RedRot", "Rust", "Mosaic", "Yellow"}
+    assert all(result["agronomic_fidelity"] == "verified_accurate" for result in results.values())
+
+
 if __name__ == "__main__":
     report = {
         "phase": "Phase 8 — Final Evaluation & System Verification",
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "offline_inference": test_offline_onnx_inference(),
-        "unsupported_and_degraded_images": test_unsupported_and_degraded_images(),
-        "missing_environmental_model": test_missing_environmental_model_is_not_fabricated(),
-        "translation_audit": test_translated_guidance_audit(),
+        "offline_inference": _run_offline_onnx_inference(),
+        "unsupported_and_degraded_images": _run_unsupported_and_degraded_images(),
+        "missing_environmental_model": _run_missing_environmental_model_is_not_fabricated(),
+        "translation_audit": _run_translated_guidance_audit(),
         "overall_status": "ALL_TESTS_PASSED"
     }
 

@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import {
   api, DiagnosisHistory, DiagnosisResult, downloadVerifiedTrainingData, Farm, Knowledge, ModelVersion,
-  PendingDiseaseObservation, RiskHistory, RiskResult, User, WeatherGuidance, WeatherObservation
+  PendingDiseaseObservation, RiskHistory, RiskResult, SyntheticFusionDemoResult, User, WeatherGuidance, WeatherObservation
 } from "./api";
 import { geminiGpsDisclosure, languageOptions, Language, navigation, text, translate } from "./i18n";
 
@@ -714,6 +714,22 @@ function Diagnosis({ farms, t, language }: { farms: Farm[]; t: typeof copy.en; l
   const [diagnosisGuidanceError, setDiagnosisGuidanceError] = useState("");
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [inferenceMode, setInferenceMode] = useState<"server" | "on_device">("server");
+  const [demoResult, setDemoResult] = useState<SyntheticFusionDemoResult | null>(null);
+  const [demoError, setDemoError] = useState("");
+  const [demoSubmitting, setDemoSubmitting] = useState(false);
+  const [demoEnabled, setDemoEnabled] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    api<{ checks?: { synthetic_demo?: string } }>("/health/ready")
+      .then((health) => {
+        if (active) setDemoEnabled(health.checks?.synthetic_demo === "development_only");
+      })
+      .catch(() => {
+        if (active) setDemoEnabled(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -746,6 +762,8 @@ function Diagnosis({ farms, t, language }: { farms: Farm[]; t: typeof copy.en; l
     }
     setFile(candidate);
     setResult(null);
+    setDemoResult(null);
+    setDemoError("");
   }
 
   // Client-Side Canvas Feature Triage for Offline / On-Device Mode
@@ -845,6 +863,24 @@ function Diagnosis({ farms, t, language }: { farms: Farm[]; t: typeof copy.en; l
     }
   }
 
+  async function runSyntheticDemo() {
+    if (!file || !farmId) return;
+    const body = new FormData();
+    body.append("file", file);
+    body.append("farm_id", farmId);
+    setDemoSubmitting(true);
+    setDemoError("");
+    setDemoResult(null);
+    try {
+      const demo = await api<SyntheticFusionDemoResult>("/demo/fusion/predict", { method: "POST", body });
+      setDemoResult(demo);
+    } catch (e) {
+      setDemoError(e instanceof Error ? e.message : "Synthetic demo could not be completed.");
+    } finally {
+      setDemoSubmitting(false);
+    }
+  }
+
   return (
     <div className="page-enter">
       <div className="page-heading">
@@ -878,7 +914,7 @@ function Diagnosis({ farms, t, language }: { farms: Farm[]; t: typeof copy.en; l
         {preview ? (
           <div className="image-preview">
             <img src={preview} alt={localizedText(language, "Selected leaf preview")} />
-            <button type="button" className="remove-image" onClick={() => { setFile(null); setResult(null); }} aria-label={localizedText(language, "Remove image")}>
+            <button type="button" className="remove-image" onClick={() => { setFile(null); setResult(null); setDemoResult(null); setDemoError(""); }} aria-label={localizedText(language, "Remove image")}>
               <X size={16} />
             </button>
           </div>
@@ -892,7 +928,7 @@ function Diagnosis({ farms, t, language }: { farms: Farm[]; t: typeof copy.en; l
         )}
 
         <label className="field-label" htmlFor="diagnosis-farm">{t.selectFarm}</label>
-        <select id="diagnosis-farm" className="text-input" value={farmId} onChange={(e) => setFarmId(e.target.value)}>
+        <select id="diagnosis-farm" className="text-input" value={farmId} onChange={(e) => { setFarmId(e.target.value); setDemoResult(null); setDemoError(""); }}>
           <option value=""><LocalText source="No farm associated" /></option>
           {farms.map((farm) => <option key={farm.id} value={farm.id}>{farm.name}</option>)}
         </select>
@@ -1021,6 +1057,78 @@ function Diagnosis({ farms, t, language }: { farms: Farm[]; t: typeof copy.en; l
           {submitting ? "Analyzing leaf…" : t.send}
           <ArrowRight size={17} />
         </button>
+        {inferenceMode === "server" && demoEnabled && (
+          <section className="settings-panel" style={{ marginTop: "14px" }}>
+            <h3>{localizedText(language, "Synthetic multimodal demo only", "செயற்கைத் தரவு விளக்கக் காட்சி மட்டும்")}</h3>
+            <p className="field-hint">
+              {localizedText(language,
+                "This separate demonstration combines the leaf model with synthetic XGBoost scores. It is not a real disease-risk prediction and will not be saved to prediction history.",
+                "இது இலை மாதிரியையும் செயற்கை XGBoost மதிப்பெண்களையும் இணைக்கும் தனி விளக்கக் காட்சி. இது உண்மையான நோய் அபாயக் கணிப்பு அல்ல; கணிப்பு வரலாற்றிலும் சேமிக்கப்படாது.")}
+            </p>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={!file || !farmId || demoSubmitting}
+              onClick={() => void runSyntheticDemo()}
+            >
+              {demoSubmitting
+                ? localizedText(language, "Running demo…", "விளக்கக் காட்சி இயங்குகிறது…")
+                : localizedText(language, "Run synthetic fusion demo", "செயற்கை fusion விளக்கத்தை இயக்கவும்")}
+            </button>
+            {demoError && <p className="form-error" role="alert">{demoError}</p>}
+            {demoResult && (
+              <div className="prediction-result" aria-live="polite">
+                <strong>{localizedText(language, "Synthetic demo only — not for farm decisions", "செயற்கை விளக்கக் காட்சி மட்டும் — பண்ணை முடிவுகளுக்குப் பயன்படுத்த வேண்டாம்")}</strong>
+                <p>{localizedText(language,
+                  "Synthetic environmental labels are arbitrary program-generated values. This fusion score is not a disease risk, diagnosis, forecast, or agronomic recommendation.",
+                  "செயற்கைச் சுற்றுச்சூழல் labels நிரல் மூலம் உருவாக்கப்பட்டவை. இந்த fusion மதிப்பெண் நோய் அபாயம், நோயறிதல், முன்னறிவிப்பு அல்லது விவசாயப் பரிந்துரை அல்ல.")}</p>
+                <p>
+                  {localizedText(language, "Image model:", "பட மாதிரி:")}{" "}
+                  {diseaseLabel(demoResult.image.predicted_class, language)} ·{" "}
+                  {localizedText(language, "Demo fusion top match:", "விளக்க fusion முதன்மைப் பொருத்தம்:")}{" "}
+                  {diseaseLabel(demoResult.explanation_disease, language)}
+                </p>
+                {demoResult.ranked_scores.map((score) => (
+                  <p key={score.disease_class} style={{ margin: "4px 0" }}>
+                    {diseaseLabel(score.disease_class, language)} — {localizedText(language, "image", "படம்")} {(score.image_score * 100).toFixed(1)}% ·{" "}
+                    {localizedText(language, "synthetic weather", "செயற்கை வானிலை")} {(score.synthetic_environment_score * 100).toFixed(1)}% ·{" "}
+                    {localizedText(language, "demo fusion", "விளக்க fusion")} {(score.demo_fusion_score * 100).toFixed(1)}%
+                  </p>
+                ))}
+                {Object.keys(demoResult.not_fused_classes).length > 0 && (
+                  <p className="field-hint">
+                    {localizedText(language, "Not fused:", "இணைக்கப்படவில்லை:")}{" "}
+                    {Object.keys(demoResult.not_fused_classes).map((disease) => `${diseaseLabel(disease, language)} — ${localizedText(language, "no matching image-model class", "பொருந்தும் பட மாதிரி வகுப்பு இல்லை")}`).join("; ")}
+                  </p>
+                )}
+                {demoResult.image.heatmap_base64 && (
+                  <div className="gradcam-box">
+                    <strong>{localizedText(language, "Grad-CAM++ leaf heatmap", "Grad-CAM++ இலை வெப்ப வரைபடம்")}</strong>
+                    <img className="gradcam-img" src={`data:image/jpeg;base64,${demoResult.image.heatmap_base64}`} alt="Grad-CAM++ demo heatmap" />
+                  </div>
+                )}
+                <details>
+                  <summary>{localizedText(language, "Synthetic environmental SHAP explanation", "செயற்கை சுற்றுச்சூழல் SHAP விளக்கம்")}</summary>
+                  {demoResult.shap_drivers.map((driver) => (
+                    <p key={driver.feature}>
+                      {riskFeatureLabel(driver.feature, language)}: {driver.shap_value > 0 ? "+" : ""}
+                      {driver.shap_value.toFixed(5)}
+                    </p>
+                  ))}
+                </details>
+                <div className="gradcam-box">
+                  <strong>{localizedText(language, "Synthetic ALE curve", "செயற்கை ALE வளைவு")}</strong>
+                  <img className="gradcam-img" src={`data:image/png;base64,${demoResult.ale_plot_base64}`} alt="Synthetic-demo ALE plot" />
+                </div>
+                <p className="field-hint">{demoResult.detector.message}</p>
+                <p className="field-hint">
+                  {localizedText(language, "Weather source:", "வானிலை ஆதாரம்:")} {demoResult.weather.source} ·{" "}
+                  {localizedText(language, demoResult.weather.freshness === "current" ? "Current" : "Cached", demoResult.weather.freshness === "current" ? "தற்போதைய" : "சேமித்தது")}
+                </p>
+              </div>
+            )}
+          </section>
+        )}
       </form>
     </div>
   );

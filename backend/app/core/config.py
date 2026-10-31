@@ -44,6 +44,20 @@ class Settings(BaseSettings):
     def cors_origins(self) -> list[str]:
         return [origin.strip() for origin in self.frontend_origins.split(",") if origin.strip()]
 
+    def resolve_artifact_path(self, configured_path: str) -> Path:
+        artifact_path = Path(configured_path)
+        if not artifact_path.is_absolute():
+            artifact_path = Path(__file__).resolve().parents[3] / artifact_path
+        return artifact_path.resolve()
+
+    @property
+    def resolved_image_model_path(self) -> Path:
+        return self.resolve_artifact_path(self.image_model_path)
+
+    @property
+    def resolved_risk_model_path(self) -> Path:
+        return self.resolve_artifact_path(self.risk_model_path)
+
     @property
     def resolved_database_url(self) -> URL:
         url = make_url(self.database_url)

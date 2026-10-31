@@ -61,10 +61,28 @@ ENABLE_EXPERIMENTAL_IMAGE_MODEL=true
 ```
 
 The API labels results experimental, returns uncalibrated model scores rather
-than disease probabilities, does not create Grad-CAM++ explanations, and does
-not save uploaded images or diagnoses to history. Independent field testing,
-label provenance confirmation, and calibration/uncertainty validation remain
-required before making diagnostic claims.
+than disease probabilities, and saves prediction metadata without saving
+uploaded images. A Grad-CAM++ heatmap is included when it can be generated.
+Independent field testing, label provenance confirmation, and
+calibration/uncertainty validation remain required before making diagnostic
+claims.
+
+## Export and verify ONNX parity
+
+The optional ONNX export is generated locally from the trained PyTorch
+checkpoint; it is not checked into the repository. Install the ML dependencies
+and run:
+
+```powershell
+python ml\export_onnx.py
+python -m pytest ml\test_edge_cases.py::test_offline_onnx_inference -q
+```
+
+The parity test exports the ONNX file first when it is missing, then compares
+CPU ONNX Runtime probabilities with PyTorch probabilities on the same
+preprocessed image. The test skips if the optional trained checkpoint is
+unavailable. The exported model is for offline parity evaluation; the web
+application's browser fallback is not ONNX inference.
 
 ## Required before training or activation
 

@@ -8,3 +8,5 @@ PyALE==1.2.0
 matplotlib==3.10.0
 torch==2.13.0
 torchvision==0.28.0
+onnx==1.19.0
+onnxruntime==1.27.0
