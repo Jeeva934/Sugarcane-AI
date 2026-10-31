@@ -5,6 +5,8 @@ weather observations, disease observations, risk predictions, image diagnoses,
 explanations, disease knowledge, model versions, and audit logs. User and farm
 relations use ownership-scoped service queries. UTC timestamps are used by the
 application; database drivers may return naive UTC timestamps on SQLite.
+Farms may store an optional soil-test pH value and one GPS point. Soil pH is
+user-entered context; it is not collected by the weather provider.
 
 ```mermaid
 erDiagram

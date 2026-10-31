@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     access_token_minutes: int = 60
     max_upload_bytes: int = 10 * 1024 * 1024
     open_meteo_base_url: str = "https://api.open-meteo.com/v1/forecast"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-3.1-flash-lite"
     image_model_path: str = ""
     enable_experimental_image_model: bool = False
     risk_model_path: str = ""

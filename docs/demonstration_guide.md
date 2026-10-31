@@ -44,24 +44,14 @@ npm run dev
 
 ## 3. Step-by-Step Live Demonstration Script
 
-### Demo Scenario 1: Farmer Onboarding & Biometeorological Early Warning (7 Days Ahead)
+### Demo Scenario 1: Weather-Based Scouting Guidance (Current Observation)
 1. **Navigate to the Application:** Open [http://localhost:5173](http://localhost:5173).
-2. **Switch Language:** In the header navigation bar, click the language dropdown and select **தமிழ் (Tamil)** or **English**. Notice how all navigation tabs, alerts, metric cards, and advisories instantly update.
+2. **Switch Language:** In the header navigation bar, choose one of the available languages. Machine-translated interface text and Gemini responses are drafts that need local-language review.
 3. **Navigate to the Environmental Risk Tab:** Click on **Environmental Risk** (or **சுற்றுச்சூழல் இடர்**).
 4. **Select Farm Profile:** Choose the default farm: **Coimbatore Cane Plot (11.00° N, 76.96° E)**.
-5. **Observe 7-Day Forecast & Conduciveness Scores:**
-   - The system retrieves live 7-day meteorological forecasts from Open-Meteo.
-   - Inspect the **Composite Risk Badge**: Displays `HIGH`, `MODERATE`, or `LOW` risk.
-   - Inspect the **Sub-Disease Conduciveness Breakdown**:
-     - *Red Rot Conduciveness Index*
-     - *Rust Conduciveness Index*
-     - *Wilt Conduciveness Index*
-6. **Inspect TreeSHAP Local Drivers:**
-   - Review the horizontal driver bars showing feature contributions (e.g. `rh_mean_7d`, `temp_min_7d`, `precip_sum_7d`).
-   - Observe how high relative humidity ($>80\%$) pushes the probability bar upward.
-7. **Read & Listen to Agronomic Recommendations:**
-   - Review actionable preventative field recommendations (e.g., clearing waterlogging channels).
-   - Click the **Listen / கேள்** button: hear the browser synthesize the audio advisory in the selected language.
+5. **Review current farm weather:** Confirm the displayed temperature, humidity, rain, wind, and observation time. The app does not have a validated environmental disease prediction model; current weather is not an outbreak forecast.
+6. **Generate weather-aware guidance:** Click **Analyze weather with Gemini**. The app sends the current weather readings, selected disease, published disease guidance, and saved crop/soil context to the backend Gemini integration. It does not send the farm name, exact coordinates, or notes.
+7. **Review the AI output:** Check the exact weather values used, the short explanation, suggested scouting actions, and the limitations. Gemini advice is not a diagnosis; confirm concerns with a local agricultural expert. The backend must have `GEMINI_API_KEY` configured.
 
 ---
 
@@ -116,4 +106,3 @@ npm run dev
    - Check bio-controls (*Trichoderma viride* @ 2.5 kg/ha in enriched FYM).
    - Check chemical treatments (Carbendazim 0.1% sett dip, Mancozeb 0.2% foliar spray).
 4. **Click the Audio Button:** Verify fluent Tamil speech synthesis of the complete technical advisory.
-

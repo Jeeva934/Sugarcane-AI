@@ -11,14 +11,14 @@
 
 Phase 7 brings together the research and modeling milestones established across Phases 1 through 6 into a robust, farmer-centric decision support application. The platform provides rural agricultural communities with:
 1. **Explainable Image-Based Leaf Diagnosis:** Powered by EfficientNetV2-S with real-time Grad-CAM++ symptom localization, pre-inference image quality checks, and predictive entropy uncertainty quantification.
-2. **Predictive Agrometeorological Risk Forecasting:** Powered by XGBoost and Open-Meteo live/cached weather forecasts with 7-day lead time, local TreeSHAP feature drivers, and sub-disease conduciveness indices.
+2. **Weather Monitoring and AI Guidance:** Open-Meteo supplies current or cached farm observations; configured Gemini generates scouting guidance from those readings and published disease guidance. No validated environmental disease prediction model or future forecast is active.
 3. **Verified Bilingual Agronomic Guidance:** Grounded in ICAR-SBI (Indian Council of Agricultural Research - Sugarcane Breeding Institute) agronomic recommendations, available in both English and Tamil.
-4. **Accessible Farmer Interface:** Built with React 18, Vite, and Tailwind CSS, featuring browser-native Text-to-Speech (TTS), offline colorimetric screening, and exported ONNX model inference.
+4. **Accessible Farmer Interface:** Built with React 18 and Vite, featuring a 16-language UI (English plus 15 Indian languages), browser-native Text-to-Speech (TTS), and offline colorimetric screening. Machine-translated UI and advice require native-speaker review.
 
 ```mermaid
 flowchart TD
     subgraph Farmer_Client [Farmer Interface - React 18 + Vite]
-        UI[Bilingual Web UI - English / Tamil]
+        UI[Web UI - English + 15 Indian languages]
         TTS[Web Speech API - Text-to-Speech]
         QC[Client Quality Screen & Canvas Triage]
         ONNX[On-Device ONNX Runtime - Offline Mode]
@@ -79,11 +79,11 @@ The backend service is structured using **FastAPI**, **SQLAlchemy ORM**, **Pydan
 | `/auth/me` | `GET` | Returns authenticated user details and active profile. |
 | `/farms` | `POST` / `GET` | Registers and lists farms with agro-climatic coordinates (latitude, longitude, soil, cultivar). |
 | `/diagnose` | `POST` | Multi-part image upload; assesses blur/lighting/contrast; executes EfficientNetV2 inference; calculates entropy and confidence margin; computes Grad-CAM++ heatmap overlay; logs diagnostic result. |
-| `/risk/predict` | `POST` | Ingests farm coordinates; fetches 14-day history + 7-day forecast from Open-Meteo; computes 18 rolling/lagged features; executes XGBoost; computes TreeSHAP feature drivers; calculates sub-disease indices. |
+| `/risk/predict` | `POST` | Uses the selected disease's per-disease XGBoost artifact and farm soil pH/current weather features; returns an uncalibrated SHAP-explained observation-time association score. It does not forecast future disease. Requires verified, consented training observations and explicit model opt-in. |
 | `/explanations/{id}` | `GET` | Retrieves persisted Grad-CAM++ base64 heatmaps, predicted bounding boxes, and SHAP feature importance vectors. |
 | `/guidance` | `GET` | Returns ICAR-SBI verified management protocols filtered by disease class and language (`en` / `ta`). |
 | `/guidance/{disease}` | `GET` | Deep-dive agronomic protocol detailing symptoms, biological causes, and cultural/biological/chemical treatments. |
-| `/health/ready` | `GET` | Verifies DB connectivity, image model checkpoint, environmental model weights, and external weather API latency. |
+| `/health/ready` | `GET` | Verifies DB connectivity and reports per-disease image/environmental model artifact readiness. |
 
 ### 2.2 Database Schema & Migrations
 
@@ -159,9 +159,9 @@ The frontend is implemented in **React 18** with **TypeScript**, bundled via **V
 
 ## 4. Farmer-Centric Features: Language, Audio, Quality & Offline Triage
 
-### 4.1 Bilingual Internationalization (English & Tamil)
-- Complete UI localization covering navigation tabs, status messages, alerts, metric labels, and recommendations.
-- Seeded database knowledge base featuring authentic Tamil agricultural terminology:
+### 4.1 Multilingual UI and Agronomic Guidance
+- UI labels, navigation, status messages, alerts, and seeded guidance can be displayed in English and 15 Indian languages. Non-English UI translations are machine-generated drafts and need review by local speakers.
+- Seeded database knowledge remains available in English and Tamil, including Tamil agricultural terminology:
   - *Red Rot:* செவ்வழுகல் நோய் (*Colletotrichum falcatum*)
   - *Rust:* துரு நோய் (*Puccinia melanocephala*)
   - *Mosaic:* மொசைக் வைரஸ்
@@ -251,4 +251,3 @@ In strict adherence to the project guidelines:
 | **Frontend Styling** | [`frontend/src/styles.css`](file:///e:/CLIENT/Jeeva/Sugarcane-AI/frontend/src/styles.css) | Completed |
 | **Exported ONNX Model** | [`artifacts/image/efficientnet_v2_s.onnx`](file:///e:/CLIENT/Jeeva/Sugarcane-AI/artifacts/image/efficientnet_v2_s.onnx) | Exported (76.85 MB) |
 | **Automated Tests** | [`backend/tests/`](file:///e:/CLIENT/Jeeva/Sugarcane-AI/backend/tests/) | 14/14 Passing |
-

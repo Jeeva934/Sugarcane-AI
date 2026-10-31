@@ -1,4 +1,7 @@
-from datetime import datetime, timezone
+import csv
+from datetime import datetime, timedelta, timezone
+from io import StringIO
+import math
 from pathlib import Path
 from time import perf_counter
 import logging
@@ -7,15 +10,17 @@ import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from PIL import Image, UnidentifiedImageError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_admin
 from app.core.config import settings
 from app.db.session import get_db
-from app.models import AuditLog, Explanation, DiseaseKnowledge, Farm, ImageDiagnosis, ModelVersion, RiskPrediction, User, WeatherObservation
+from app.models import AuditLog, DiseaseKnowledge, DiseaseObservation, Explanation, Farm, ImageDiagnosis, ModelVersion, RiskPrediction, User, WeatherObservation
 from app.schemas import (
+    DiseaseObservationCreate,
+    DiseaseObservationReview,
     FarmCreate,
     FarmOut,
     FarmUpdate,
@@ -27,9 +32,18 @@ from app.schemas import (
     UserCreate,
     UserOut,
     UserPreferences,
+    WeatherGuidanceOut,
+    WeatherGuidanceRequest,
 )
 from app.services.image_classifier import ImageModelUnavailable, classify_image
-from app.services.risk_predictor import RiskModelUnavailable, predict_environmental_risk
+from app.services.gemini_weather_guidance import WeatherGuidanceError, generate_weather_guidance
+from app.services.verified_risk_predictor import (
+    RiskModelUnavailable,
+    has_any_model,
+    has_model,
+    model_artifact_path,
+    predict_disease_presence,
+)
 from app.services.security import clear_session_cookie, hash_password, set_session_cookie, verify_password
 
 router = APIRouter()
@@ -216,6 +230,109 @@ def fetch_current_weather(farm: Farm, db: Session):
     return observation
 
 
+def fetch_recent_weather_context(farm: Farm, end_at: datetime) -> dict:
+    if farm.latitude is None or farm.longitude is None:
+        raise HTTPException(status_code=422, detail="Add confirmed farm coordinates before requesting weather guidance.")
+
+    params = {
+        "latitude": farm.latitude,
+        "longitude": farm.longitude,
+        "hourly": "temperature_2m,relative_humidity_2m,precipitation",
+        "past_days": 7,
+        "forecast_days": 1,
+        "timezone": "UTC",
+    }
+    try:
+        with httpx.Client(timeout=httpx.Timeout(20.0, connect=5.0)) as client:
+            response = client.get(settings.open_meteo_base_url, params=params)
+            response.raise_for_status()
+            payload = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        logger.warning("Recent weather history request failed: %s", type(exc).__name__)
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "weather_history_unavailable",
+                "message": "Recent farm weather history is unavailable, so a disease-risk screening cannot be generated.",
+            },
+        ) from None
+
+    hourly = payload.get("hourly") if isinstance(payload, dict) else None
+    if not isinstance(hourly, dict):
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "weather_history_unavailable",
+                "message": "Recent farm weather history is unavailable, so a disease-risk screening cannot be generated.",
+            },
+        )
+
+    times = hourly.get("time")
+    temperatures = hourly.get("temperature_2m")
+    humidities = hourly.get("relative_humidity_2m")
+    precipitation = hourly.get("precipitation")
+    if not all(isinstance(values, list) for values in (times, temperatures, humidities, precipitation)):
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "weather_history_unavailable",
+                "message": "Recent farm weather history is incomplete, so a disease-risk screening cannot be generated.",
+            },
+        )
+
+    end_time = end_at if end_at.tzinfo else end_at.replace(tzinfo=timezone.utc)
+    start_time = end_time - timedelta(days=7)
+    days: dict[str, dict[str, list[float]]] = {}
+    for index, value in enumerate(times):
+        if not isinstance(value, str) or index >= len(temperatures) or index >= len(humidities) or index >= len(precipitation):
+            continue
+        try:
+            observed_at = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if observed_at.tzinfo is None:
+            observed_at = observed_at.replace(tzinfo=timezone.utc)
+        if observed_at < start_time or observed_at > end_time:
+            continue
+
+        day = days.setdefault(observed_at.date().isoformat(), {
+            "temperature": [],
+            "humidity": [],
+            "precipitation": [],
+            "humid_hours": [],
+        })
+        for field, raw_value in (
+            ("temperature", temperatures[index]),
+            ("humidity", humidities[index]),
+            ("precipitation", precipitation[index]),
+        ):
+            if isinstance(raw_value, (int, float)) and not isinstance(raw_value, bool) and math.isfinite(raw_value):
+                day[field].append(float(raw_value))
+        humidity = humidities[index]
+        if isinstance(humidity, (int, float)) and not isinstance(humidity, bool) and math.isfinite(humidity) and humidity >= 80:
+            day["humid_hours"].append(1.0)
+
+    daily_summaries = []
+    for date, readings in sorted(days.items()):
+        rainfall = readings["precipitation"]
+        daily_summaries.append({
+            "date": date,
+            "hours_with_temperature": len(readings["temperature"]),
+            "mean_temperature_c": round(sum(readings["temperature"]) / len(readings["temperature"]), 1) if readings["temperature"] else None,
+            "mean_relative_humidity_pct": round(sum(readings["humidity"]) / len(readings["humidity"]), 1) if readings["humidity"] else None,
+            "hours_relative_humidity_at_least_80_pct": len(readings["humid_hours"]),
+            "total_precipitation_mm": round(sum(rainfall), 1) if rainfall else None,
+        })
+
+    return {
+        "provider": "Open-Meteo",
+        "period_start_utc": start_time.isoformat(),
+        "period_end_utc": end_time.isoformat(),
+        "available_days": len(daily_summaries),
+        "days": daily_summaries,
+    }
+
+
 @router.get("/weather/current")
 def current_weather(farm_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     farm = owned_farm(farm_id, user, db)
@@ -250,18 +367,257 @@ def refresh_weather(farm_id: str, user: User = Depends(get_current_user), db: Se
     return {"status": "unavailable" if not cached else "stale", "provider": "Open-Meteo", "cached": bool(cached), "observation": cached[0] if cached else None, "unavailable_fields": ["temperature_min", "temperature_max"], "message": "Weather refresh failed; no current weather assessment should be inferred."}
 
 
+@router.post("/weather/guidance", response_model=WeatherGuidanceOut)
+def analyze_weather_guidance(
+    payload: WeatherGuidanceRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not settings.gemini_api_key.strip():
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "gemini_not_configured",
+                "message": "AI weather guidance is not configured. Set GEMINI_API_KEY on the backend.",
+            },
+        )
+
+    farm = owned_farm(payload.farm_id, user, db)
+    if farm.latitude is None or farm.longitude is None:
+        raise HTTPException(status_code=422, detail="Add confirmed farm coordinates before requesting weather guidance.")
+
+    fresh_observation = fetch_current_weather(farm, db)
+    observation = fresh_observation or (cached_weather(farm.id, db, limit=1) or [None])[0]
+    if observation is None:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "weather_unavailable", "message": "No current or cached weather observation is available."},
+        )
+
+    language_code = payload.language_code or user.preferred_language
+    knowledge_language = "ta" if language_code == "ta" else "en"
+    knowledge_entry = db.scalar(select(DiseaseKnowledge).where(
+        DiseaseKnowledge.disease_class == payload.disease_class,
+        DiseaseKnowledge.language_code == knowledge_language,
+        DiseaseKnowledge.is_published.is_(True),
+    ))
+    knowledge = ({
+        "display_name": knowledge_entry.display_name,
+        "symptoms": knowledge_entry.symptoms,
+        "preventive_guidance": knowledge_entry.preventive_guidance,
+        "monitoring_guidance": knowledge_entry.monitoring_guidance,
+        "source_reference": knowledge_entry.source_reference,
+    } if knowledge_entry else {})
+    weather_data = {
+        "temperature_c": observation.temperature_mean,
+        "relative_humidity_pct": observation.relative_humidity,
+        "dew_point_c": observation.dew_point,
+        "rainfall_mm": observation.precipitation,
+        "wind_speed_kmh": observation.wind_speed,
+    }
+    if all(value is None for value in weather_data.values()):
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "weather_measurements_unavailable", "message": "Saved weather data has no usable measurements."},
+        )
+    recent_weather = fetch_recent_weather_context(farm, observation.observed_at)
+
+    try:
+        guidance = generate_weather_guidance(
+            api_key=settings.gemini_api_key.strip(),
+            model=settings.gemini_model,
+            language_code=language_code,
+            disease_class=payload.disease_class,
+            observed_at=observation.observed_at,
+            freshness="current" if fresh_observation else "cached",
+            weather=weather_data,
+            location={"latitude": farm.latitude, "longitude": farm.longitude},
+            recent_weather=recent_weather,
+            crop_variety=farm.crop_variety,
+            growth_stage=farm.growth_stage,
+            soil_ph=farm.soil_ph,
+            knowledge=knowledge,
+        )
+    except WeatherGuidanceError as exc:
+        if exc.code in {"provider_timeout", "provider_unavailable", "provider_rate_limited"}:
+            logger.warning(
+                "Gemini weather guidance failed with code %s (provider HTTP status: %s, message: %s).",
+                exc.code,
+                exc.provider_status_code or "unavailable",
+                exc.provider_message or "no provider message",
+            )
+            status_code = 429 if exc.code == "provider_rate_limited" else 503
+            raise HTTPException(
+                status_code=status_code,
+                detail={"code": exc.code, "message": "AI weather guidance is temporarily unavailable. Try again later."},
+            ) from exc
+        logger.warning("Gemini weather guidance returned invalid output (%s).", exc.code)
+        raise HTTPException(
+            status_code=502,
+            detail={"code": "invalid_ai_response", "message": "AI weather guidance could not be validated. Try again."},
+        ) from exc
+
+    return {
+        "status": "generated",
+        "model": settings.gemini_model,
+        "weather_observed_at": observation.observed_at,
+        "weather_freshness": "current" if fresh_observation else "cached",
+        "weather_history_days": recent_weather["available_days"],
+        "weather_measurements": weather_data,
+        "disease_class": payload.disease_class,
+        **guidance,
+    }
+
+
+@router.post("/disease-observations", status_code=status.HTTP_201_CREATED)
+def create_disease_observation(
+    payload: DiseaseObservationCreate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    farm = owned_farm(payload.farm_id, user, db)
+    if farm.latitude is None or farm.longitude is None:
+        raise HTTPException(status_code=422, detail="Add the farm GPS location before recording a disease observation.")
+
+    observation = fetch_current_weather(farm, db)
+    if observation is None:
+        observation = (cached_weather(farm.id, db, limit=1) or [None])[0]
+    weather_snapshot = None
+    if observation:
+        retrieved_at = observation.retrieved_at
+        if retrieved_at.tzinfo is None:
+            retrieved_at = retrieved_at.replace(tzinfo=timezone.utc)
+        age_seconds = (datetime.now(timezone.utc) - retrieved_at).total_seconds()
+        weather_snapshot = {
+            "temperature_c": observation.temperature_mean,
+            "relative_humidity_pct": observation.relative_humidity,
+            "rainfall_mm": observation.precipitation,
+            "wind_speed_kmh": observation.wind_speed,
+            "dew_point_c": observation.dew_point,
+            "observed_at": observation.observed_at.isoformat(),
+            "source": observation.source,
+            "freshness": "current" if 0 <= age_seconds < 3600 else "cached",
+        }
+
+    report = DiseaseObservation(
+        farm_id=farm.id,
+        reported_by_user_id=user.id,
+        disease_class=payload.disease_class,
+        observation_date=observation.observed_at.date() if observation else datetime.now(timezone.utc).date(),
+        outcome="pending_verification",
+        reported_outcome=payload.reported_outcome,
+        verification_status="pending",
+        verification_method="farmer_report",
+        environment_snapshot={
+            "latitude": farm.latitude if payload.research_consent else None,
+            "longitude": farm.longitude if payload.research_consent else None,
+            "soil_ph": farm.soil_ph,
+            "weather": weather_snapshot,
+        },
+        research_consent=payload.research_consent,
+        notes=payload.notes,
+    )
+    db.add(report)
+    db.flush()
+    record_audit(
+        db,
+        user,
+        "disease_observation.reported",
+        "disease_observation",
+        report.id,
+        {"research_consent": payload.research_consent, "weather_available": weather_snapshot is not None},
+    )
+    db.commit()
+    return {
+        "id": report.id,
+        "disease_class": report.disease_class,
+        "reported_outcome": report.reported_outcome,
+        "verification_status": report.verification_status,
+        "observation_date": report.observation_date,
+        "weather_captured": weather_snapshot is not None,
+        "research_consent": report.research_consent,
+        "message": "Saved for expert review. This farmer report is not a verified training label or a disease prediction.",
+    }
+
+
+@router.get("/disease-observations")
+def list_disease_observations(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    limit: int = Query(default=50, ge=1, le=100),
+):
+    reports = db.scalars(
+        select(DiseaseObservation)
+        .join(Farm, DiseaseObservation.farm_id == Farm.id)
+        .where(Farm.user_id == user.id)
+        .order_by(DiseaseObservation.created_at.desc())
+        .limit(limit)
+    )
+    return [
+        {
+            "id": report.id,
+            "farm_id": report.farm_id,
+            "disease_class": report.disease_class,
+            "reported_outcome": report.reported_outcome,
+            "outcome": report.outcome if report.verification_status == "verified" else None,
+            "verification_status": report.verification_status,
+            "observation_date": report.observation_date,
+            "research_consent": report.research_consent,
+            "created_at": report.created_at,
+        }
+        for report in reports
+    ]
+
+
 @router.post("/risk/predict")
 async def predict_risk(payload: RiskRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     farm = owned_farm(payload.farm_id, user, db)
-    if not settings.enable_experimental_risk_model or not Path(settings.risk_model_path).is_file():
+    if not settings.enable_experimental_risk_model:
         raise HTTPException(
             status_code=503,
-            detail={"code": "risk_model_unavailable", "message": "The experimental risk model is disabled or no validated artifact is configured. No risk score was generated."}
+            detail={"code": "risk_model_unavailable", "message": "Environmental model inference is disabled. No score was generated."}
         )
     if farm.latitude is None or farm.longitude is None:
         raise HTTPException(status_code=422, detail="Add confirmed farm coordinates before requesting environmental risk.")
+    artifact_path = model_artifact_path(settings.risk_model_path, payload.disease_class)
+    if not artifact_path.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "risk_model_unavailable",
+                "message": f"No trained environmental model is available for {payload.disease_class}. "
+                "Collect and expert-verify consented observations, then train the per-disease model.",
+            },
+        )
+
+    observation = fetch_current_weather(farm, db)
+    is_fresh = observation is not None
+    if observation is None:
+        observation = (cached_weather(farm.id, db, limit=1) or [None])[0]
+    if observation is None:
+        raise HTTPException(status_code=503, detail="Current weather is unavailable and no cached observation exists.")
+
+    feature_values = {
+        "soil_ph": farm.soil_ph,
+        "temperature_c": observation.temperature_mean,
+        "relative_humidity_pct": observation.relative_humidity,
+        "rainfall_mm": observation.precipitation,
+        "wind_speed_kmh": observation.wind_speed,
+        "dew_point_c": observation.dew_point,
+    }
+    missing_weather = [name for name, value in feature_values.items() if name != "soil_ph" and value is None]
+    if missing_weather:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Weather provider did not return required model features: {', '.join(missing_weather)}.",
+        )
     try:
-        result = await run_in_threadpool(predict_environmental_risk, farm.latitude, farm.longitude)
+        result = await run_in_threadpool(
+            predict_disease_presence,
+            payload.disease_class,
+            feature_values,
+            settings.risk_model_path,
+        )
     except RiskModelUnavailable as exc:
         raise HTTPException(status_code=503, detail={"code": "risk_model_unavailable", "message": str(exc)}) from exc
     except Exception as exc:
@@ -272,16 +628,16 @@ async def predict_risk(payload: RiskRequest, user: User = Depends(get_current_us
     record = RiskPrediction(
         user_id=user.id,
         farm_id=farm.id,
-        disease_class=payload.disease_class or "CompositeRisk",
-        risk_score=result["overall_risk_score"],
-        risk_category=result["risk_category"],
+        disease_class=payload.disease_class,
+        risk_score=result["disease_presence_score"],
+        risk_category="uncalibrated",
         prediction_timestamp=now,
-        weather_data_timestamp=now,
-        data_freshness_status="live",
-        model_version="xgboost_risk_prototype_v1",
-        input_period_start=payload.period_start or now,
-        input_period_end=payload.period_end or (now + timedelta(days=7)),
-        forecast_horizon_days=7,
+        weather_data_timestamp=observation.observed_at,
+        data_freshness_status="current" if is_fresh else "cached",
+        model_version=result["model_version"],
+        input_period_start=observation.observed_at,
+        input_period_end=observation.observed_at,
+        forecast_horizon_days=0,
         status="experimental",
     )
     db.add(record)
@@ -292,7 +648,7 @@ async def predict_risk(payload: RiskRequest, user: User = Depends(get_current_us
         prediction_id=record.id,
         explanation_type="shap_tree",
         structured_result={"drivers": result["primary_drivers"]},
-        model_version="xgboost_risk_prototype_v1",
+        model_version=result["model_version"],
     ))
 
     record_audit(db, user, "risk.experimental_generated", "risk_prediction", record.id, {"saved_to_history": True})
@@ -463,8 +819,134 @@ def update_knowledge(knowledge_id: str, payload: KnowledgeUpdate, user: User = D
 
 
 @router.get("/admin/data-quality")
-def admin_data_quality(user: User = Depends(require_admin)):
-    return {"status": "not_configured", "issues": [], "message": "Dataset quality checks have not been connected."}
+def admin_data_quality(user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    pending_count = db.scalar(
+        select(func.count()).select_from(DiseaseObservation).where(DiseaseObservation.verification_status == "pending")
+    ) or 0
+    verified_count = db.scalar(
+        select(func.count()).select_from(DiseaseObservation).where(
+            DiseaseObservation.verification_status == "verified",
+            DiseaseObservation.research_consent.is_(True),
+        )
+    ) or 0
+    weather_complete_count = db.scalar(
+        select(func.count()).select_from(DiseaseObservation).where(
+            DiseaseObservation.verification_status == "verified",
+            DiseaseObservation.research_consent.is_(True),
+            DiseaseObservation.environment_snapshot.is_not(None),
+        )
+    ) or 0
+    return {
+        "status": "collecting_observations",
+        "pending_review": pending_count,
+        "verified_consented": verified_count,
+        "verified_consented_with_weather_snapshot": weather_complete_count,
+        "issues": ["No environmental disease model is activated; field labels and validation data are still required."],
+        "message": "Farmer reports are not training labels until reviewed with field or laboratory evidence. Current weather snapshots are not a future disease forecast.",
+    }
+
+
+@router.get("/admin/disease-observations/pending")
+def admin_pending_disease_observations(user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    reports = db.scalars(
+        select(DiseaseObservation)
+        .where(DiseaseObservation.verification_status == "pending")
+        .order_by(DiseaseObservation.created_at.asc())
+        .limit(200)
+    )
+    return [
+        {
+            "id": report.id,
+            "farm_id": report.farm_id,
+            "reported_by_user_id": report.reported_by_user_id,
+            "disease_class": report.disease_class,
+            "reported_outcome": report.reported_outcome,
+            "observation_date": report.observation_date,
+            "environment_snapshot": report.environment_snapshot,
+            "research_consent": report.research_consent,
+            "notes": report.notes,
+            "created_at": report.created_at,
+        }
+        for report in reports
+    ]
+
+
+@router.patch("/admin/disease-observations/{observation_id}/review")
+def review_disease_observation(
+    observation_id: str,
+    payload: DiseaseObservationReview,
+    user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    report = db.get(DiseaseObservation, observation_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Disease observation was not found.")
+    if report.verification_status != "pending":
+        raise HTTPException(status_code=409, detail="Only pending reports can be reviewed.")
+    report.outcome = payload.outcome
+    report.verification_status = "verified"
+    report.verification_method = payload.verification_method.strip()
+    report.source_reference = payload.source_reference.strip()
+    report.reviewed_by_user_id = user.id
+    record_audit(
+        db,
+        user,
+        "disease_observation.verified",
+        "disease_observation",
+        report.id,
+        {"outcome": report.outcome, "method": report.verification_method},
+    )
+    db.commit()
+    return {
+        "id": report.id,
+        "outcome": report.outcome,
+        "verification_status": report.verification_status,
+        "verification_method": report.verification_method,
+        "source_reference": report.source_reference,
+        "included_in_training_export": report.research_consent,
+    }
+
+
+@router.get("/admin/disease-observations/training.csv")
+def export_verified_training_observations(user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    reports = db.scalars(
+        select(DiseaseObservation)
+        .where(
+            DiseaseObservation.verification_status == "verified",
+            DiseaseObservation.research_consent.is_(True),
+            DiseaseObservation.farm_id.is_not(None),
+        )
+        .order_by(DiseaseObservation.observation_date.asc())
+    )
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "date", "farm_group", "disease_class", "outcome", "verification_status", "research_consent", "soil_ph",
+        "temperature_c", "relative_humidity_pct", "rainfall_mm",
+        "wind_speed_kmh", "dew_point_c",
+    ])
+    for report in reports:
+        snapshot = report.environment_snapshot or {}
+        weather = snapshot.get("weather") or {}
+        writer.writerow([
+            report.observation_date.isoformat(),
+            report.farm_id,
+            report.disease_class,
+            report.outcome,
+            report.verification_status,
+            report.research_consent,
+            snapshot.get("soil_ph"),
+            weather.get("temperature_c"),
+            weather.get("relative_humidity_pct"),
+            weather.get("rainfall_mm"),
+            weather.get("wind_speed_kmh"),
+            weather.get("dew_point_c"),
+        ])
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="verified-environmental-observations.csv"'},
+    )
 
 
 @router.get("/health/live")
@@ -474,9 +956,6 @@ def live():
 
 @router.get("/health/ready")
 def ready(db: Session = Depends(get_db)):
-    def artifact_status(path: str) -> str:
-        return "disabled" if not Path(path).is_file() else "unavailable"
-
     image_model_status = (
         "experimental_enabled"
         if settings.enable_experimental_image_model and Path(settings.image_model_path).is_file()
@@ -484,13 +963,21 @@ def ready(db: Session = Depends(get_db)):
     )
     risk_model_status = (
         "experimental_enabled"
-        if settings.enable_experimental_risk_model and Path(settings.risk_model_path).is_file()
+        if settings.enable_experimental_risk_model and has_any_model(settings.risk_model_path)
         else "disabled" if not settings.enable_experimental_risk_model else "unavailable"
     )
     checks = {
         "database": "ok",
         "image_model": image_model_status,
         "risk_model": risk_model_status,
+        "risk_models": {
+            disease: (
+                "experimental_enabled"
+                if settings.enable_experimental_risk_model and has_model(settings.risk_model_path, disease)
+                else "disabled" if not settings.enable_experimental_risk_model else "unavailable"
+            )
+            for disease in ("Mosaic", "RedRot", "Rust", "Yellow", "Wilt")
+        },
     }
     try:
         db.execute(select(User.id).limit(1))

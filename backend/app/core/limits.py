@@ -16,6 +16,8 @@ async def rate_limit(request: Request, call_next):
         return await call_next(request)
     if path.endswith("/auth/login") or path.endswith("/auth/register"):
         limit = 8
+    elif path.endswith("/weather/guidance"):
+        limit = 5
     elif path.endswith("/diagnosis/predict") or path.endswith("/risk/predict") or path.endswith("/weather/refresh"):
         limit = 12
     else:

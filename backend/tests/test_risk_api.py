@@ -1,39 +1,41 @@
-from app.models import Farm, User
-from app.services.security import hash_password
-
-def test_risk_prediction_and_shap_explanation(client, monkeypatch):
+def test_risk_prediction_and_shap_explanation(client, monkeypatch, tmp_path):
     import app.api.routes as routes
+    from types import SimpleNamespace
+    from datetime import datetime, timezone
 
+    model_artifact = tmp_path / "xgboost_redrot.json"
+    model_artifact.write_text("test-only mocked artifact", encoding="utf-8")
     monkeypatch.setattr(routes.settings, "enable_experimental_risk_model", True)
-    monkeypatch.setattr(routes.settings, "risk_model_path", "artifacts/environmental/xgboost_risk_prototype.json")
-
-    # Mock the risk predictor so unit test doesn't depend on network
+    monkeypatch.setattr(routes.settings, "risk_model_path", str(tmp_path / "xgboost_risk_prototype.json"))
     monkeypatch.setattr(
         routes,
-        "predict_environmental_risk",
-        lambda lat, lon: {
-            "status": "experimental_prototype",
-            "overall_risk_score": 0.825,
-            "risk_category": "high",
-            "disease_conduciveness_scores": {
-                "red_rot": 0.85,
-                "rust": 0.60,
-                "wilt": 0.75
-            },
-            "forecast_lead_time": "7-day forecast horizon",
+        "fetch_current_weather",
+        lambda farm, db: SimpleNamespace(
+            observed_at=datetime.now(timezone.utc),
+            temperature_mean=29.5,
+            relative_humidity=84.5,
+            precipitation=5.0,
+            wind_speed=6.0,
+            dew_point=25.8,
+        ),
+    )
+
+    monkeypatch.setattr(
+        routes,
+        "predict_disease_presence",
+        lambda disease, features, path: {
+            "status": "experimental_observation_time_association",
+            "disease_class": disease,
+            "disease_presence_score": 0.825,
+            "score_note": "Uncalibrated model score.",
             "processing_time_ms": 12,
+            "model_version": "xgboost_redrot",
             "primary_drivers": [
-                {"feature": "rh_mean_7d", "value": 84.5, "shap_importance": 1.45, "effect": "increases_risk"},
-                {"feature": "temp_min_7d", "value": 25.8, "shap_importance": 0.92, "effect": "increases_risk"}
+                {"feature": "relative_humidity_pct", "value": 84.5, "shap_value": 1.45, "effect": "increases_score"},
+                {"feature": "dew_point_c", "value": 25.8, "shap_value": 0.92, "effect": "increases_score"},
             ],
-            "weather_summary": {
-                "temperature_mean_7d": 29.5,
-                "temperature_min_7d": 25.8,
-                "relative_humidity_7d": 84.5,
-                "precipitation_sum_7d": 62.0,
-                "thi_index": 78.2
-            },
-            "scientific_disclosure": "Experimental prototype based on agrometeorological parameters (ICAR-SBI/RPCAU)."
+            "input_features": features,
+            "scientific_disclosure": "Not a future disease forecast or confirmed diagnosis.",
         }
     )
 
@@ -53,14 +55,13 @@ def test_risk_prediction_and_shap_explanation(client, monkeypatch):
 
     res = client.post("/api/v1/risk/predict", json={
         "farm_id": farm["id"],
-        "disease_class": "CompositeRisk"
+        "disease_class": "RedRot"
     })
     assert res.status_code == 200
     data = res.json()
-    assert data["status"] == "experimental_prototype"
-    assert data["overall_risk_score"] == 0.825
-    assert data["risk_category"] == "high"
-    assert data["forecast_lead_time"] == "7-day forecast horizon"
+    assert data["status"] == "experimental_observation_time_association"
+    assert data["disease_presence_score"] == 0.825
+    assert data["disease_class"] == "RedRot"
     assert len(data["primary_drivers"]) == 2
     assert data["saved_to_history"] is True
 
@@ -71,4 +72,3 @@ def test_risk_prediction_and_shap_explanation(client, monkeypatch):
     assert expl_data["status"] == "available"
     assert expl_data["explanation_type"] == "shap_tree"
     assert len(expl_data["drivers"]) == 2
-

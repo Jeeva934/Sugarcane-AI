@@ -76,7 +76,78 @@ required before making diagnostic claims.
 - Validate calibration and an uncertainty/abstention threshold before production use.
 - Configure artifacts explicitly through `IMAGE_MODEL_PATH` and `RISK_MODEL_PATH`; startup never downloads weights.
 
-The environmental XGBoost/SHAP/ALE and image YOLO/Grad-CAM++ components are not
-implemented. An experimental EfficientNetV2 classifier training script is
-provided for this dataset; its evaluation results must not be presented as
-real-world diagnostic accuracy.
+## Environmental risk model status
+
+The application can save a farm GPS point and optional soil-test pH, and can
+request current weather for that point. Browser GPS requires the user's
+permission; it records one point and does not map a field boundary. Open-Meteo
+weather is not disease-observation data, and soil pH must be measured and
+entered by the user.
+
+No environmental-risk dataset or trained artifact is included in this
+repository. `ml/train_risk_model.py` requires
+an admin export named `datasets/environmental/verified-environmental-observations.csv`.
+An empty header-only starter is provided at
+`ml/verified-environmental-observations-template.csv`; it is
+not training data and must not be filled with generated or guessed labels.
+Farmers can submit field reports from Environmental Risk; reports remain
+unverified until an admin records a verification method and evidence reference.
+Only explicitly consented, verified reports are included in the admin CSV
+export. Training also requires at least 10 distinct dates and at least 10
+present and 10 absent labels for a disease in each chronological train,
+validation, and test split. Insufficient data causes training to stop rather
+than fabricate labels.
+
+Install the optional ML dependencies and train after the verified CSV has
+been downloaded from the Admin page:
+
+```powershell
+python -m pip install -r ml\requirements.txt
+python ml\train_risk_model.py --data datasets\environmental\verified-environmental-observations.csv
+```
+
+The script trains a separate XGBoost presence/absence classifier per disease
+and writes temporal holdout metrics, SHAP global importance values, and ALE
+plots under `artifacts\environmental\`. These observation-time associations
+are not a future disease forecast; a lead-time claim requires labels collected
+after a defined future window and independent field validation. The app does
+not automatically activate trained artifacts.
+
+The backend adapter looks for `xgboost_<disease>.json` in the configured
+`RISK_MODEL_PATH` directory (for example `xgboost_redrot.json`). After a
+verified dataset and artifact exist, set `ENABLE_EXPERIMENTAL_RISK_MODEL=true`
+in the backend `.env` and restart the API. The result is an uncalibrated
+observation-time association score, not a future forecast or diagnosis.
+
+The Mendeley Sugarcane Leaf Disease Dataset
+([DOI 10.17632/9424skmnrk.1](https://data.mendeley.com/datasets/9424skmnrk/1))
+contains leaf images and disease classes only; it has no matching farm
+weather/incidence rows and cannot train this environmental model. Open-Meteo's
+[Historical Weather API](https://archive-api.open-meteo.com/v1/archive) can
+supply past weather features, but disease outcomes still must come from
+expert-verified field or laboratory observations with consent. Do not join
+image labels to unrelated weather or generate labels with an LLM.
+
+### Synthetic pipeline demo (not for disease prediction)
+
+To demonstrate that the XGBoost/SHAP/ALE software path can run before real
+field records are collected, use:
+
+```powershell
+python ml\generate_and_train_environmental_demo.py
+```
+
+This creates 3,000 synthetic rows under `datasets\environmental_demo\` and
+five demo-only models plus SHAP/ALE outputs under
+`artifacts\environmental_demo\`. Labels are generated from arbitrary code
+rules, not research or observed disease cases. The CSV deliberately does not
+match the verified-data training schema, and model filenames use
+`demo_xgboost_` so the application inference adapter will not load them.
+Metrics from this run only show that the demo training code executed; they
+have no agricultural or predictive meaning.
+
+The current UI uses GPS, optional soil-test pH, and current/cached Open-Meteo
+weather to show conditions and general monitoring tips. These readings alone
+are not a disease diagnosis. Image YOLO/Grad-CAM++ components are not
+implemented, and the experimental EfficientNetV2 image classifier cannot
+substitute for weather-linked disease occurrence records.

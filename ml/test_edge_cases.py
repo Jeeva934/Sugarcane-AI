@@ -173,33 +173,25 @@ def test_unsupported_and_degraded_images():
     print("[PASS] Image quality checks, uncertainty & corrupted image rejection verified.")
     return results
 
-def test_stale_weather_data():
-    print("\n--- 3. Testing Weather Provider Network Resilience & Stale Caching ---")
-    import httpx
-    from app.services.risk_predictor import predict_environmental_risk
+def test_missing_environmental_model_is_not_fabricated():
+    print("\n--- 3. Verifying missing environmental models never return synthetic scores ---")
+    from app.services.verified_risk_predictor import RiskModelUnavailable, predict_disease_presence
 
-    orig_get = httpx.get
-    def mock_failing_get(*args, **kwargs):
-        raise httpx.RequestError("Simulated Open-Meteo network timeout / provider outage")
-    
-    httpx.get = mock_failing_get
+    features = {
+        "soil_ph": None,
+        "temperature_c": 29.0,
+        "relative_humidity_pct": 80.0,
+        "rainfall_mm": 1.0,
+        "wind_speed_kmh": 7.0,
+        "dew_point_c": 24.0,
+    }
     try:
-        risk_result = predict_environmental_risk(lat=11.00, lon=76.96)
-        print("Fallback execution succeeded during simulated network outage!")
-        print(f"Status returned: {risk_result['status']}")
-        print(f"Overall Risk Score: {risk_result['overall_risk_score']}")
-        print(f"Scientific Disclosure: {risk_result['scientific_disclosure'][:60]}...")
-        assert risk_result["status"] in ("fallback_climatology", "experimental_prototype")
-        print("[PASS] Network resilience & fallback verified.")
-        res = {
-            "status": "passed",
-            "fallback_risk_score": risk_result["overall_risk_score"],
-            "fallback_mode": risk_result["status"]
-        }
-    finally:
-        httpx.get = orig_get
-
-    return res
+        predict_disease_presence("RedRot", features, str(PROJECT_ROOT / "artifacts" / "environmental"))
+    except RiskModelUnavailable as exc:
+        assert "No trained environmental model" in str(exc)
+        print("[PASS] Missing model is reported; no synthetic disease score is returned.")
+        return {"status": "passed", "model_unavailable": True}
+    raise AssertionError("A score was returned despite the missing trained artifact.")
 
 def test_translated_guidance_audit():
     print("\n--- 4. Auditing Disease Guidance: English vs Tamil Agronomic Translation ---")
@@ -258,7 +250,7 @@ if __name__ == "__main__":
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "offline_inference": test_offline_onnx_inference(),
         "unsupported_and_degraded_images": test_unsupported_and_degraded_images(),
-        "stale_weather_resilience": test_stale_weather_data(),
+        "missing_environmental_model": test_missing_environmental_model_is_not_fabricated(),
         "translation_audit": test_translated_guidance_audit(),
         "overall_status": "ALL_TESTS_PASSED"
     }

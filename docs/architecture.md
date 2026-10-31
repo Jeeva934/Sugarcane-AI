@@ -23,7 +23,12 @@ user-owned farms, current Open-Meteo observation retrieval and caching, reviewed
 knowledge CRUD API, bounded upload validation, rate limiting, health checks,
 history persistence, audit logging, history persistence, audit logging, account deletion, and explicit model-unavailable responses.
 
-Not implemented: validated model inference, explainability generation,
+Not implemented: validated environmental-risk or image model inference, explainability generation,
 historical weather backfill, persistent image/object storage, password reset,
 production account-management UI beyond deletion, PWA/offline inference,
 production-grade distributed rate limiting, and full frontend test suite.
+
+Farm records can store one user-permitted GPS point and optional manually
+measured soil pH. Current Open-Meteo weather is displayed as context only.
+Without matching, verified disease observations and a validated model artifact,
+the environmental-risk API does not produce disease scores.

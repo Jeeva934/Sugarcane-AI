@@ -15,7 +15,8 @@ The image and environmental modules are not fused into a jointly trained model.
 - [x] Open-Meteo current observation integration with cached/stale status.
 - [x] Upload content/size/dimension validation and experimental image inference behind explicit opt-in.
 - [x] Explicit risk-model unavailable response; no fallback thresholds or scores.
-- [x] English/Tamil frontend shell, farms, sign-in, and model-readiness disclosure.
+- [x] Frontend localization in English and 15 Indian languages; generated translations need local review.
+- [x] Gemini weather guidance based on the latest farm observations and reviewed disease guidance.
 - [x] Admin-protected knowledge CRUD API and disease-language records.
 - [x] Focused backend API tests and image dataset audit utility.
 - [x] Experimental image-classifier training pipeline with exact-duplicate removal, split-manifest output, and computed holdout metrics.
@@ -56,6 +57,19 @@ use a long random `SECRET_KEY`, and set `FRONTEND_ORIGINS` to exact trusted
 origins. Weather requests use Open-Meteo and only use coordinates entered for a
 farm. No device location is collected. Rate limiting is process-local and must
 be replaced with a shared store for multi-worker hosting.
+
+To enable weather-specific farmer tips, set `GEMINI_API_KEY` in the backend
+`.env` file and restart the API. `GEMINI_MODEL` defaults to
+`gemini-3.1-flash-lite`. The key stays on the backend; the frontend never receives
+it. The Analyze weather action sends the exact farm GPS coordinates, the
+previous seven days of Open-Meteo weather summaries, current readings, selected
+disease, reviewed disease context, and saved crop/soil details to Gemini. Do not
+use this feature unless you consent to sharing the precise farm location with
+Google. It does not send account details, farm names, or farmer notes. Gemini
+returns a preliminary environmental risk screening, not a validated disease
+model, diagnosis, or forecast; confirm concerns with a local agriculture
+expert. Open-Meteo values are gridded provider estimates, not measurements from
+sensors in the farmer's field.
 
 Model artifact paths are explicit. The service does not download weights at
 startup. The image model remains disabled by default; enabling it exposes only

@@ -104,26 +104,23 @@ def run_live_test():
     print(f"  Grad-CAM++ Heatmap Generated: {has_heatmap} (Length: {len(diag_data.get('heatmap_base64') or '')} chars)")
     print("✅ Leaf image diagnosis and Grad-CAM++ saliency successfully executed!")
 
-    # 5. Agrometeorological 7-Day Risk Forecast
-    print("\n[Step 5] Predicting 7-Day Agrometeorological Disease Risk (Open-Meteo)...")
+    # 5. Experimental, observation-time disease-presence association
+    print("\n[Step 5] Assessing Red rot against the trained observation-time model...")
     risk_resp = client.post("/api/v1/risk/predict", json={
         "farm_id": farm["id"],
-        "disease_class": "CompositeRisk"
+        "disease_class": "RedRot"
     })
     print(f"Risk Prediction Status: {risk_resp.status_code}")
     assert risk_resp.status_code == 200
     risk_data = risk_resp.json()
-    print(f"  Overall Risk Score:  {risk_data['overall_risk_score']}")
-    print(f"  Risk Category:       {risk_data['risk_category'].upper()}")
-    print(f"  Forecast Lead Time:  {risk_data['forecast_lead_time']}")
-    print(f"  Sub-Disease Breakdown:")
-    for d, s in risk_data.get("disease_conduciveness_scores", {}).items():
-        print(f"    - {d.replace('_', ' ').title()}: {s * 100:.1f}% conduciveness")
-    print(f"  Top TreeSHAP Feature Drivers:")
+    print(f"  Disease class:       {risk_data['disease_class']}")
+    print(f"  Uncalibrated score:  {risk_data['disease_presence_score']}")
+    print(f"  Score meaning:       {risk_data['score_note']}")
+    print(f"  Top SHAP feature drivers:")
     for driver in risk_data.get("primary_drivers", [])[:3]:
-        print(f"    - {driver['feature']}: {driver['value']} (SHAP: {driver['shap_importance']}, Effect: {driver['effect']})")
+        print(f"    - {driver['feature']}: {driver['value']} (SHAP: {driver['shap_value']}, Effect: {driver['effect']})")
     print(f"  Scientific Disclosure: {risk_data['scientific_disclosure'][:75]}...")
-    print("✅ Environmental risk forecast and SHAP explanation successfully executed!")
+    print("✅ Experimental observation-time score and SHAP explanation successfully executed!")
 
     # 6. Bilingual Agronomic Guidance Lookup
     print("\n[Step 6] Fetching ICAR-SBI Verified Guidance (Tamil & English)...")
