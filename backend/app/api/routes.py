@@ -35,7 +35,7 @@ from app.schemas import (
     WeatherGuidanceRequest,
 )
 from app.services.image_classifier import ImageModelUnavailable, classify_image
-from app.services.gemini_weather_guidance import WeatherGuidanceError, generate_weather_guidance
+from app.services.gemini_weather_guidance import WeatherGuidanceError, generate_weather_guidance, generate_risk_age_guidance
 from app.services.synthetic_demo_predictor import (
     SyntheticDemoUnavailable,
     run_synthetic_fusion_demo,
@@ -440,6 +440,7 @@ def analyze_weather_guidance(
             growth_stage=farm.growth_stage,
             soil_ph=farm.soil_ph,
             knowledge=knowledge,
+            grass_age=payload.grass_age,
         )
     except WeatherGuidanceError as exc:
         if exc.code in {"provider_timeout", "provider_unavailable", "provider_rate_limited"}:
@@ -657,6 +658,23 @@ async def predict_risk(payload: RiskRequest, user: User = Depends(get_current_us
     record_audit(db, user, "risk.experimental_generated", "risk_prediction", record.id, {"saved_to_history": True})
     db.commit()
     db.refresh(record)
+
+    if payload.grass_age:
+        result["grass_age"] = payload.grass_age
+        try:
+            age_text = await run_in_threadpool(
+                generate_risk_age_guidance,
+                api_key=settings.gemini_api_key.strip(),
+                model=settings.gemini_model,
+                language_code=user.preferred_language or "en",
+                disease_class=payload.disease_class,
+                grass_age=payload.grass_age,
+                risk_score=result["disease_presence_score"],
+                primary_drivers=result.get("primary_drivers", []),
+            )
+            result["age_ai_guidance"] = age_text
+        except Exception:
+            result["age_ai_guidance"] = None
 
     result["id"] = record.id
     result["saved_to_history"] = True

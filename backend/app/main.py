@@ -1,5 +1,7 @@
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router
 from app.core.config import settings
@@ -19,3 +21,7 @@ app.add_middleware(
 )
 app.middleware("http")(rate_limit)
 app.include_router(router, prefix="/api/v1")
+
+docs_dir = Path(__file__).resolve().parents[2] / "docs"
+if docs_dir.exists():
+    app.mount("/reports", StaticFiles(directory=str(docs_dir)), name="reports")

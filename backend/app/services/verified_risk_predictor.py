@@ -29,7 +29,7 @@ def model_artifact_path(configured_path: str, disease_class: str) -> Path:
 
 
 def has_any_model(configured_path: str) -> bool:
-    return any(has_model(configured_path, disease) for disease in DISEASE_CLASSES)
+    return Path(configured_path).is_file() or any(has_model(configured_path, disease) for disease in DISEASE_CLASSES)
 
 
 def has_model(configured_path: str, disease_class: str) -> bool:
@@ -99,13 +99,19 @@ def predict_disease_presence(
     ]
     drivers.sort(key=lambda item: abs(item["shap_value"]), reverse=True)
 
+    output_features = {
+        feature: None if (feature_values[feature] is None or np.isnan(feature_values[feature]))
+        else round(float(feature_values[feature]), 3)
+        for feature in FEATURES
+    }
+
     return {
         "status": "experimental_observation_time_association",
         "disease_class": disease_class,
         "disease_presence_score": round(score, 5),
         "score_note": "Uncalibrated model score for disease presence at observation time; not a future forecast or diagnosis.",
         "primary_drivers": drivers[:5],
-        "input_features": row,
+        "input_features": output_features,
         "model_version": artifact.stem,
         "processing_time_ms": round((perf_counter() - started) * 1000),
         "scientific_disclosure": (

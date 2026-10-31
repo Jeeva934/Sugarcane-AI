@@ -2,7 +2,7 @@ def test_gradcam_heatmap_generation_and_retrieval(client):
     from backend.tests.test_api import register
     register(client, "gradcam_tester@example.com")
     
-    with open("datasets/sugarcane_mendeley_v1/Healthy/healthy (1).jpeg", "rb") as f:
+    with open("datasets/mendeley_v1/Sugarcane Leaf Disease Dataset/Healthy/healthy (1).jpeg", "rb") as f:
         img_bytes = f.read()
         
     response = client.post(

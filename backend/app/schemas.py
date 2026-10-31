@@ -86,6 +86,7 @@ class RiskRequest(BaseModel):
     disease_class: Literal["Mosaic", "RedRot", "Rust", "Yellow", "Wilt"]
     period_start: datetime | None = None
     period_end: datetime | None = None
+    grass_age: str | None = None
 
     @model_validator(mode="after")
     def valid_period(self):
@@ -101,6 +102,7 @@ class WeatherGuidanceRequest(BaseModel):
         "en", "hi", "bn", "te", "mr", "ta", "ur", "gu",
         "kn", "or", "ml", "pa", "as", "mai", "sa", "ks",
     ] | None = None
+    grass_age: str | None = None
 
 
 class WeatherMeasurementsOut(BaseModel):

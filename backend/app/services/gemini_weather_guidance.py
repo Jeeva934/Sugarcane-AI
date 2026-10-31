@@ -87,9 +87,11 @@ def _prompt(
     growth_stage: str | None,
     soil_ph: float | None,
     knowledge: dict[str, str | None],
+    grass_age: str | None = None,
 ) -> str:
     prompt_data = {
         "disease": disease_class,
+        "grass_age": grass_age,
         "weather_observed_at_utc": observed_at.isoformat(),
         "weather_freshness": freshness,
         "weather_measurements": weather,
@@ -104,11 +106,16 @@ def _prompt(
             if knowledge.get(key)
         },
     }
+    age_clause = (
+        f"CRITICALLY factor in the sugarcane Grass / Crop Age: '{grass_age}'. Disease vulnerability varies significantly across crop age: early tillering (0-90 days) is prone to Mosaic virus and fungal seedling rot; grand growth (120-240 days) is prone to Rust on dense green foliage; maturity/ripening (270-360+ days) is acutely susceptible to Red Rot (Colletotrichum falcatum) stalk pith destruction, sucrose inversion, and Wilt. Address how this specific grass age interacts with the ambient humidity and temperature in both your risk evaluation and field action checklist. "
+        if grass_age else ""
+    )
     return (
         f"Write every user-facing field exclusively in {language}, using its native writing system. "
         f"Do not answer in English unless the requested language is English. For Tamil, use Tamil script. "
         f"Give a preliminary environmental risk screening for sugarcane and the exact selected disease "
         f"{disease_class}. The selected disease is authoritative; never substitute another disease. "
+        f"{age_clause}"
         "Do not give Red Rot symptoms or prevention advice unless the selected disease is RedRot. "
         "The exact GPS coordinates are supplied only to identify the farm location. Do not infer "
         "unprovided local climate facts from coordinates. Use the supplied recent Open-Meteo weather "
@@ -171,6 +178,7 @@ def generate_weather_guidance(
     growth_stage: str | None,
     soil_ph: float | None,
     knowledge: dict[str, str | None],
+    grass_age: str | None = None,
 ) -> dict[str, Any]:
     language = LANGUAGE_NAMES.get(language_code)
     if not language:
@@ -190,6 +198,7 @@ def generate_weather_guidance(
             growth_stage=growth_stage,
             soil_ph=soil_ph,
             knowledge=knowledge,
+            grass_age=grass_age,
         )}]}],
         "generationConfig": {
             "responseMimeType": "application/json",
@@ -233,3 +242,42 @@ def generate_weather_guidance(
     if not isinstance(payload, dict):
         raise WeatherGuidanceError("invalid_response")
     return _parse_response(payload).model_dump()
+
+
+def generate_risk_age_guidance(
+    *,
+    api_key: str,
+    model: str,
+    language_code: str,
+    disease_class: str,
+    grass_age: str,
+    risk_score: float,
+    primary_drivers: list[dict],
+) -> str:
+    """Generates a focused 2-3 sentence Gemini AI physiological advisory for Grass Age in Option 2."""
+    if not api_key.strip():
+        return ""
+    lang_name = LANGUAGE_NAMES.get(language_code, "English")
+    drivers_str = ", ".join(f"{d.get('feature')}: {d.get('value')} ({d.get('effect')})" for d in primary_drivers[:4])
+    prompt = (
+        f"Act as a Senior Sugarcane Agronomist and Pathologist. "
+        f"Write strictly in {lang_name} (use native script). "
+        f"A machine learning risk model computed a {round(risk_score * 100, 1)}% environmental disease-presence risk "
+        f"for sugarcane {disease_class}. The sugarcane Grass/Crop Age is '{grass_age}'. "
+        f"Key weather drivers: {drivers_str}. "
+        f"In 2-3 concise, farmer-friendly sentences, explain how this specific Grass Age affects plant vulnerability "
+        f"to {disease_class} under these weather conditions, and what immediate age-specific monitoring the farmer must take. "
+        f"Do not recommend dangerous chemicals. Return only the plain text advice."
+    )
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    body = {"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"temperature": 0.2, "maxOutputTokens": 250}}
+    try:
+        with httpx.Client(timeout=httpx.Timeout(15.0, connect=5.0)) as client:
+            resp = client.post(url, headers={"x-goog-api-key": api_key.strip(), "Content-Type": "application/json"}, json=body)
+            if resp.status_code == 200:
+                data = resp.json()
+                parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                return "".join(p.get("text", "") for p in parts).strip()
+    except Exception:
+        pass
+    return ""

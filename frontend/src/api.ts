@@ -116,6 +116,8 @@ export type RiskResult = {
   scientific_disclosure: string;
   id?: string;
   saved_to_history?: boolean;
+  grass_age?: string;
+  age_ai_guidance?: string | null;
 };
 
 export type SyntheticFusionDemoResult = {

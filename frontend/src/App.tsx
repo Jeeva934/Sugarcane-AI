@@ -3,7 +3,7 @@ import {
   Activity, AlertTriangle, ArrowRight, BookOpen, Check, ChevronDown, CircleHelp, CloudSun,
   Cpu, Eye, Globe2, History, Leaf, LogOut, MapPin, Menu, Pause, Play, Plus,
   Square,
-  Settings, ShieldCheck, Sprout, Upload, Volume2, Wifi, WifiOff, X
+  Settings, ShieldCheck, Sparkles, Sprout, Upload, Volume2, Wifi, WifiOff, X
 } from "lucide-react";
 import {
   api, DiagnosisHistory, DiagnosisResult, downloadVerifiedTrainingData, Farm, Knowledge, ModelVersion,
@@ -1137,6 +1137,7 @@ function Diagnosis({ farms, t, language }: { farms: Farm[]; t: typeof copy.en; l
 function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.en; language: Language }) {
   const [farmId, setFarmId] = useState("");
   const [targetDisease, setTargetDisease] = useState("RedRot");
+  const [grassAge, setGrassAge] = useState("90 days (3 Months - Tillering)");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [riskResult, setRiskResult] = useState<RiskResult | null>(null);
@@ -1150,12 +1151,14 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
   const [aiGuidanceLoading, setAiGuidanceLoading] = useState(false);
   const [aiGuidanceError, setAiGuidanceError] = useState("");
   const aiGuidanceRequestId = useRef(0);
-  const [diseaseGuidance, setDiseaseGuidance] = useState<Knowledge[]>([]);
-  const [guidanceLoading, setGuidanceLoading] = useState(false);
-  const [guidanceError, setGuidanceError] = useState("");
 
   const selectedFarm = farms.find((f) => f.id === farmId);
-  const selectedGuidance = diseaseGuidance.find((entry) => entry.disease_class === targetDisease);
+
+  useEffect(() => {
+    if (!farmId && farms.length > 0) {
+      setFarmId(farms[0].id);
+    }
+  }, [farms, farmId]);
 
   useEffect(() => {
     let active = true;
@@ -1190,20 +1193,6 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
     return () => { active = false; };
   }, [targetDisease]);
 
-  useEffect(() => {
-    let active = true;
-    setGuidanceError("");
-    setDiseaseGuidance([]);
-    setGuidanceLoading(true);
-    api<Knowledge[]>(`/knowledge/diseases?language=${language === "ta" ? "ta" : "en"}`)
-      .then((entries) => { if (active) setDiseaseGuidance(entries); })
-      .catch((e) => {
-        if (active) setGuidanceError(e instanceof Error ? e.message : "Disease guidance could not be loaded.");
-      })
-      .finally(() => { if (active) setGuidanceLoading(false); });
-    return () => { active = false; };
-  }, [language]);
-
   async function submit() {
     if (!farmId || !selectedFarm || selectedFarm.latitude === null || selectedFarm.longitude === null) {
       setError("Select a farm with saved GPS coordinates before assessing environmental risk.");
@@ -1237,7 +1226,7 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
     try {
       const res = await api<RiskResult>("/risk/predict", {
         method: "POST",
-        body: JSON.stringify({ farm_id: farmId, disease_class: targetDisease })
+        body: JSON.stringify({ farm_id: farmId, disease_class: targetDisease, grass_age: grassAge })
       });
       setRiskResult(res);
     } catch (e) {
@@ -1257,7 +1246,14 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
   }
 
   async function analyzeWeather() {
-    if (!selectedFarm) return;
+    if (!selectedFarm) {
+      setAiGuidanceError(localizedText(language, "Please choose a farm location from the left panel first.", "முதலில் இடது பேனலில் ஒரு பண்ணையைத் தேர்ந்தெடுக்கவும்."));
+      return;
+    }
+    if (selectedFarm.latitude === null || selectedFarm.longitude === null) {
+      setAiGuidanceError(localizedText(language, "Farm GPS coordinates are required before requesting weather guidance. Edit farm to add coordinates.", "வானிலை வழிகாட்டலுக்கு பண்ணை GPS தேவை. அட்சரேகையைச் சேர்க்க பண்ணையைத் திருத்தவும்."));
+      return;
+    }
     const requestId = ++aiGuidanceRequestId.current;
     const requestLanguage = language;
     setAiGuidance(null);
@@ -1268,7 +1264,7 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
     try {
       const result = await api<WeatherGuidance>("/weather/guidance", {
         method: "POST",
-        body: JSON.stringify({ farm_id: selectedFarm.id, disease_class: targetDisease, language_code: requestLanguage }),
+        body: JSON.stringify({ farm_id: selectedFarm.id, disease_class: targetDisease, language_code: requestLanguage, grass_age: grassAge }),
       });
       if (requestId === aiGuidanceRequestId.current) {
         setAiGuidance(result);
@@ -1304,229 +1300,331 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
         </div>
       </div>
 
-      <div className="assessment-form">
-        {riskModelStatus !== "experimental_enabled" && (
-          <p className="form-error" role="status">
-            <LocalText source={riskModelStatus === "checking"
-              ? "Checking per-disease environmental model availability…"
-              : riskModelStatus === "disabled"
-                ? "No verified real-world training data is available, so disease-risk predictions are turned off. Synthetic demo data is not used for predictions. Weather readings below are for monitoring only."
-                : "No trained per-disease environmental model artifact is available. Synthetic demo data is not used for predictions. Weather readings below are for monitoring only; no disease score has been generated."} />
-          </p>
-        )}
-        <label className="field-label" htmlFor="risk-farm">{t.selectFarm}</label>
-        <select
-          id="risk-farm"
-          className="text-input"
-          value={farmId}
-          onChange={(e) => { setFarmId(e.target.value); setRiskResult(null); clearAiGuidance(); setError(""); }}
-          required
-        >
-          <option value=""><LocalText source="Choose a farm location" /></option>
-          {farms.map((farm) => (
-            <option key={farm.id} value={farm.id}>
-              {farm.name} {farm.latitude !== null ? `(${farm.latitude.toFixed(2)}°N, ${farm.longitude?.toFixed(2)}°E)` : "(No coordinates)"}
-            </option>
-          ))}
-        </select>
-
-        <label className="field-label" htmlFor="risk-disease"><LocalText source="Disease guidance" /></label>
-        <select
-          id="risk-disease"
-          className="text-input"
-          value={targetDisease}
-          onChange={(event) => { setTargetDisease(event.target.value); setRiskResult(null); clearAiGuidance(); setError(""); }}
-        >
-          <option value="Mosaic"><LocalText source="Mosaic" /></option>
-          <option value="RedRot"><LocalText source="Red rot" /></option>
-          <option value="Rust"><LocalText source="Rust" /></option>
-          <option value="Yellow"><LocalText source="Yellow leaf" /></option>
-          <option value="Wilt"><LocalText source="Wilt" /></option>
-        </select>
-
-        {selectedFarm && selectedFarm.latitude === null && (
-          <p className="form-error" role="alert">
-            <LocalText source="Coordinates are required for weather-based assessment. Edit farm to add latitude & longitude." />
-          </p>
-        )}
-
-        {selectedFarm && (
-          <section className="settings-panel" aria-live="polite">
-            <h2><LocalText source="Farm conditions" /></h2>
-            <p><LocalText source="Soil pH:" /> {selectedFarm.soil_ph === null ? "Not recorded — add a soil-test result in farm details." : selectedFarm.soil_ph.toFixed(1)}</p>
-            {weatherLoading && <p><LocalText source="Fetching current weather for the saved farm GPS point…" /></p>}
-            {!weatherLoading && weather?.observation && (
-              <>
-                <p>
-                  {localizedText(language, weather.cached ? "Cached" : "Current")} <LocalText source="weather from" /> {weather.provider}
-                  {weather.timestamp ? ` · ${new Date(weather.timestamp).toLocaleString()}` : ""}
-                </p>
-                <p>
-                  <LocalText source="Temperature:" /> {weather.observation.temperature_mean === null ? localizedText(language, "unavailable") : `${weather.observation.temperature_mean.toFixed(1)} °C`}
-                  {" · "}<LocalText source="Humidity:" /> {weather.observation.relative_humidity === null ? localizedText(language, "unavailable") : `${weather.observation.relative_humidity.toFixed(0)}%`}
-                  {" · "}<LocalText source="Rain:" /> {weather.observation.precipitation === null ? localizedText(language, "unavailable") : `${weather.observation.precipitation.toFixed(1)} mm`}
-                </p>
-                <p>
-                  <LocalText source="Wind:" /> {weather.observation.wind_speed === null ? localizedText(language, "unavailable") : `${weather.observation.wind_speed.toFixed(1)} km/h`}
-                  {" · "}<LocalText source="Dew point:" /> {weather.observation.dew_point === null ? localizedText(language, "unavailable") : `${weather.observation.dew_point.toFixed(1)} °C`}
-                </p>
-              </>
-            )}
-            {!weatherLoading && !weather?.observation && selectedFarm.latitude !== null && (
-              <p className="form-error" role="status"><LocalText source={weather?.message ?? "No weather observations are available for this farm yet."} /></p>
-            )}
-            <p className="field-hint">
-              {weather?.cached
-                ? localizedText(language, "Weather is cached, not live. A single weather reading cannot diagnose a disease or confirm an outbreak.", "வானிலை சேமிக்கப்பட்ட தரவு; நேரடி தரவு அல்ல. ஒரு அளவீடு நோயை உறுதி செய்யாது.")
-                : localizedText(language, "Weather is supplied by Open-Meteo. A single weather reading cannot diagnose a disease or confirm an outbreak.", "Open-Meteo வானிலைத் தரவை வழங்குகிறது. ஒரு அளவீடு நோயை உறுதி செய்யாது.")}
+      <div className="risk-split-layout">
+        {/* LEFT COLUMN: Sticky options & farm conditions */}
+        <div className="risk-left-sticky">
+          {riskModelStatus !== "experimental_enabled" && (
+            <p className="form-error" role="status" style={{ marginBottom: "16px" }}>
+              <LocalText source={riskModelStatus === "checking"
+                ? "Checking per-disease environmental model availability…"
+                : riskModelStatus === "disabled"
+                  ? "No verified real-world training data is available, so disease-risk predictions are turned off. Synthetic demo data is not used for predictions. Weather readings below are for monitoring only."
+                  : "No trained per-disease environmental model artifact is available. Synthetic demo data is not used for predictions. Weather readings below are for monitoring only; no disease score has been generated."} />
             </p>
-            <div className="model-notice">
-              <ShieldCheck />
-              <div>
-                <strong>{localizedText(language, "Disease monitoring and prevention guidance", "நோய் கண்காணிப்பு மற்றும் தடுப்பு வழிகாட்டி")}</strong>
-                <p>{localizedText(language, "Get field-specific tips from the latest farm weather readings using Gemini AI.", "பண்ணையின் சமீபத்திய வானிலை அளவுகளை Gemini AI மூலம் ஆராய்ந்து, உங்கள் வயலுக்கான ஆலோசனையைப் பெறுங்கள்.")}</p>
-                <p className="field-hint">{geminiGpsDisclosure[language]}</p>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => void analyzeWeather()}
-                  disabled={aiGuidanceLoading || weatherLoading || !weather?.observation}
-                >
-                  {aiGuidanceLoading
-                    ? localizedText(language, "Analyzing current weather…")
-                    : localizedText(language, "Analyze weather with Gemini")}
-                </button>
-                {aiGuidanceError && <p className="form-error" role="alert"><LocalText source={aiGuidanceError} /></p>}
-                {aiGuidance && (
-                  <div className="ai-weather-guidance" aria-live="polite">
-                    <p className="field-hint">
-                      Gemini {aiGuidance.model} · {localizedText(language, aiGuidance.weather_freshness === "current" ? "Current weather" : "Cached weather")} · {localizedText(language, "Recent weather days:", "கடந்த 7 நாள் வானிலைத் தரவு:")} {aiGuidance.weather_history_days} · {new Date(aiGuidance.weather_observed_at).toLocaleString()}
-                    </p>
-                    <p className="field-hint">
-                      {localizedText(language, "Weather values used")}:{" "}
-                      {localizedText(language, "Temperature")}: {aiGuidance.weather_measurements.temperature_c ?? "—"} °C ·{" "}
-                      {localizedText(language, "Humidity")}: {aiGuidance.weather_measurements.relative_humidity_pct ?? "—"}% ·{" "}
-                      {localizedText(language, "Rain")}: {aiGuidance.weather_measurements.rainfall_mm ?? "—"} mm ·{" "}
-                      {localizedText(language, "Wind")}: {aiGuidance.weather_measurements.wind_speed_kmh ?? "—"} km/h
-                    </p>
-                    <p className="field-hint">
-                      {localizedText(language, "Preliminary AI risk screening only — not a confirmed diagnosis or validated forecast.", "இது முதற்கட்ட AI அபாய மதிப்பீடு மட்டுமே; உறுதியான நோய் கண்டறிதலோ சரிபார்க்கப்பட்ட முன்னறிவிப்போ அல்ல.")}
-                    </p>
-                    <p><strong>{weatherRiskLabel(aiGuidance.risk_level, language)}</strong></p>
-                    <SpeechButton
-                      text={[
-                        aiGuidance.summary,
-                        aiGuidance.risk_reason,
-                        aiGuidance.weather_effect,
-                        `${localizedText(language, "What to do", "என்ன செய்வது")}: ${aiGuidance.actions.join(". ")}`,
-                        aiGuidance.watch_for.length
-                          ? `${localizedText(language, "What to watch for", "என்ன பார்க்க வேண்டும்")}: ${aiGuidance.watch_for.join(". ")}`
-                          : "",
-                        aiGuidance.limitations,
-                      ].filter(Boolean).join(". ")}
-                      lang={language}
-                      label={localizedText(language, "Listen to Gemini explanation", "ஜெமினி விளக்கத்தைக் கேளுங்கள்")}
-                    />
-                    <h3>{aiGuidance.summary}</h3>
-                    <p>{aiGuidance.risk_reason}</p>
-                    <p>{aiGuidance.weather_effect}</p>
-                    <strong>{localizedText(language, "What to do")}</strong>
-                    <ul>{aiGuidance.actions.map((action, index) => <li key={`action-${index}`}>{action}</li>)}</ul>
-                    {aiGuidance.watch_for.length > 0 && (
-                      <>
-                        <strong>{localizedText(language, "What to watch for")}</strong>
-                        <ul>{aiGuidance.watch_for.map((item, index) => <li key={`watch-${index}`}>{item}</li>)}</ul>
-                      </>
-                    )}
-                    <p className="field-hint">{aiGuidance.limitations}</p>
-                    <p className="field-hint">{localizedText(language, "AI-generated guidance can be wrong. It is not a diagnosis or a disease forecast; confirm concerns with a local agriculture expert.")}</p>
+          )}
+
+          <label className="field-label" htmlFor="risk-farm" style={{ marginTop: 0 }}>{t.selectFarm}</label>
+          <select
+            id="risk-farm"
+            className="text-input"
+            value={farmId}
+            onChange={(e) => { setFarmId(e.target.value); setRiskResult(null); clearAiGuidance(); setError(""); }}
+            required
+          >
+            <option value=""><LocalText source="Choose a farm location" /></option>
+            {farms.map((farm) => (
+              <option key={farm.id} value={farm.id}>
+                {farm.name} {farm.latitude !== null ? `(${farm.latitude.toFixed(2)}°N, ${farm.longitude?.toFixed(2)}°E)` : "(No coordinates)"}
+              </option>
+            ))}
+          </select>
+
+          <label className="field-label" htmlFor="risk-disease"><LocalText source="Disease guidance" /></label>
+          <select
+            id="risk-disease"
+            className="text-input"
+            value={targetDisease}
+            onChange={(event) => { setTargetDisease(event.target.value); setRiskResult(null); clearAiGuidance(); setError(""); }}
+          >
+            <option value="Mosaic"><LocalText source="Mosaic" /></option>
+            <option value="RedRot"><LocalText source="Red rot" /></option>
+            <option value="Rust"><LocalText source="Rust" /></option>
+            <option value="Yellow"><LocalText source="Yellow leaf" /></option>
+            <option value="Wilt"><LocalText source="Wilt" /></option>
+          </select>
+
+          <label className="field-label" htmlFor="risk-grass-age">
+            <LocalText source="Grass age (Crop stage)" />
+          </label>
+          <select
+            id="risk-grass-age"
+            className="text-input"
+            value={grassAge}
+            onChange={(event) => { setGrassAge(event.target.value); setRiskResult(null); clearAiGuidance(); setError(""); }}
+          >
+            <option value="30 days (1 Month - Germination / Sprouting)">
+              {localizedText(language, "30 days (1 Month - Germination / Sprouting)", "30 நாட்கள் (1 மாதம் - முளைப்பு நிலை)")}
+            </option>
+            <option value="60 days (2 Months - Early Tillering)">
+              {localizedText(language, "60 days (2 Months - Early Tillering)", "60 நாட்கள் (2 மாதம் - ஆரம்ப தூர்க்கட்டும் நிலை)")}
+            </option>
+            <option value="90 days (3 Months - Tillering)">
+              {localizedText(language, "90 days (3 Months - Tillering)", "90 நாட்கள் (3 மாதம் - தூர்க்கட்டும் நிலை)")}
+            </option>
+            <option value="120 days (4 Months - Late Tillering)">
+              {localizedText(language, "120 days (4 Months - Late Tillering)", "120 நாட்கள் (4 மாதம் - தீவிர தூர்க்கட்டு)")}
+            </option>
+            <option value="180 days (6 Months - Grand Growth)">
+              {localizedText(language, "180 days (6 Months - Grand Growth)", "180 நாட்கள் (6 மாதம் - தீவிர வளர்ச்சி நிலை)")}
+            </option>
+            <option value="240 days (8 Months - Stalk Elongation)">
+              {localizedText(language, "240 days (8 Months - Stalk Elongation)", "240 நாட்கள் (8 மாதம் - தண்டு வளர்ச்சி நிலை)")}
+            </option>
+            <option value="300 days (10 Months - Early Maturity)">
+              {localizedText(language, "300 days (10 Months - Early Maturity)", "300 நாட்கள் (10 மாதம் - ஆரம்ப முதிர்ச்சி நிலை)")}
+            </option>
+            <option value="360 days (12 Months - Harvest Maturity)">
+              {localizedText(language, "360 days (12 Months - Harvest Maturity)", "360 நாட்கள் (12 மாதம் - அறுவடை நிலை)")}
+            </option>
+            <option value="Ratoon Crop (1st-2nd Ratoon)">
+              {localizedText(language, "Ratoon Crop (1st-2nd Ratoon)", "மறுதாம்பு பயிர் (Ratoon)")}
+            </option>
+          </select>
+
+          {selectedFarm && selectedFarm.latitude === null && (
+            <p className="form-error" role="alert" style={{ marginTop: "12px" }}>
+              <LocalText source="Coordinates are required for weather-based assessment. Edit farm to add latitude & longitude." />
+            </p>
+          )}
+
+          {selectedFarm && (
+            <section className="settings-panel" style={{ marginTop: "16px", padding: "16px" }} aria-live="polite">
+              <h2 style={{ fontSize: "15px", marginBottom: "8px" }}><LocalText source="Farm conditions" /></h2>
+              <p style={{ margin: "4px 0", fontSize: "13px" }}>
+                <LocalText source="Soil pH:" /> {selectedFarm.soil_ph === null ? "Not recorded — add a soil-test result in farm details." : selectedFarm.soil_ph.toFixed(1)}
+              </p>
+              {weatherLoading && <p style={{ fontSize: "12px", color: "var(--muted)" }}><LocalText source="Fetching current weather for the saved farm GPS point…" /></p>}
+              {!weatherLoading && weather?.observation && (
+                <div style={{ marginTop: "10px", fontSize: "12px", lineHeight: "1.6" }}>
+                  <p style={{ color: "#475569", fontWeight: "600", margin: "2px 0" }}>
+                    {localizedText(language, weather.cached ? "Cached" : "Current")} <LocalText source="weather from" /> {weather.provider}
+                    {weather.timestamp ? ` · ${new Date(weather.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginTop: "8px" }}>
+                    <div style={{ background: "#f8fafc", padding: "6px 8px", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                      <span style={{ color: "#64748b", fontSize: "11px", display: "block" }}><LocalText source="Temperature" /></span>
+                      <strong>{weather.observation.temperature_mean === null ? "—" : `${weather.observation.temperature_mean.toFixed(1)} °C`}</strong>
+                    </div>
+                    <div style={{ background: "#f8fafc", padding: "6px 8px", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                      <span style={{ color: "#64748b", fontSize: "11px", display: "block" }}><LocalText source="Humidity" /></span>
+                      <strong>{weather.observation.relative_humidity === null ? "—" : `${weather.observation.relative_humidity.toFixed(0)}%`}</strong>
+                    </div>
+                    <div style={{ background: "#f8fafc", padding: "6px 8px", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                      <span style={{ color: "#64748b", fontSize: "11px", display: "block" }}><LocalText source="Rain" /></span>
+                      <strong>{weather.observation.precipitation === null ? "—" : `${weather.observation.precipitation.toFixed(1)} mm`}</strong>
+                    </div>
+                    <div style={{ background: "#f8fafc", padding: "6px 8px", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                      <span style={{ color: "#64748b", fontSize: "11px", display: "block" }}><LocalText source="Wind" /></span>
+                      <strong>{weather.observation.wind_speed === null ? "—" : `${weather.observation.wind_speed.toFixed(1)} km/h`}</strong>
+                    </div>
                   </div>
-                )}
-                {guidanceLoading && <p className="field-hint">{localizedText(language, "Loading disease guidance…", "நோய் வழிகாட்டி ஏற்றப்படுகிறது…")}</p>}
-                {guidanceError && <p className="form-error" role="alert"><LocalText source={guidanceError} /></p>}
-                {!guidanceError && selectedGuidance ? (
-                  <>
-                    <p><strong>{diseaseLabel(selectedGuidance.disease_class, language)}</strong> — {translate(language, selectedGuidance.symptoms)}</p>
-                    <p><strong>{localizedText(language, "Prevention", "தடுப்பு")}:</strong> {translate(language, selectedGuidance.preventive_guidance)}</p>
-                    <p><strong>{localizedText(language, "Monitor", "கண்காணிப்பு")}:</strong> {translate(language, selectedGuidance.monitoring_guidance)}</p>
-                    <p className="field-hint">{localizedText(language, "Guidance source: ", "வழிகாட்டி ஆதாரம்: ")}{selectedGuidance.source_reference}</p>
-                  </>
-                ) : !guidanceError && !guidanceLoading && (
-                  <p>{localizedText(language, "No reviewed guidance is available for this disease in the selected language.", "இந்த மொழியில் சரிபார்க்கப்பட்ட நோய் வழிகாட்டி கிடைக்கவில்லை.")}</p>
-                )}
-                <p className="field-hint">
-                  {localizedText(language, "This is not a diagnosis. Confirm suspected disease with a local agricultural extension officer before applying chemicals.", "இது நோய் உறுதி அல்ல. ரசாயன மருந்து பயன்படுத்தும் முன் உள்ளூர் வேளாண்மை அலுவலரிடம் உறுதி செய்யவும்.")}
+                </div>
+              )}
+              {!weatherLoading && !weather?.observation && selectedFarm.latitude !== null && (
+                <p className="form-error" role="status"><LocalText source={weather?.message ?? "No weather observations are available for this farm yet."} /></p>
+              )}
+            </section>
+          )}
+
+          {error && <p className="form-error" role="alert" style={{ marginTop: "14px" }}><LocalText source={error} /></p>}
+          {guidanceCheckMessage && <p className="form-success" role="status" style={{ marginTop: "14px" }}><LocalText source={guidanceCheckMessage} /></p>}
+
+          <button
+            type="button"
+            className="primary-button submit-button"
+            style={{ width: "100%", marginTop: "16px" }}
+            disabled={!farmId || loading || !selectedFarm || selectedFarm.latitude === null || selectedFarm.longitude === null}
+            onClick={() => void submit()}
+          >
+            {loading
+              ? riskModelStatus === "experimental_enabled" ? t.checkingRisk : localizedText(language, "Refreshing weather…")
+              : riskModelStatus === "experimental_enabled" ? t.runRisk : localizedText(language, "Refresh weather")}
+            <ArrowRight size={17} />
+          </button>
+        </div>
+
+        {/* RIGHT COLUMN: Scrollable Content & Gemini Research */}
+        <div className="risk-right-scrollable">
+          {/* Card 1: Gemini AI Weather Research */}
+          <div className="gemini-research-card">
+            <div className="gemini-action-bar">
+              <div>
+                <span className="eyebrow" style={{ color: "#2563eb" }}>
+                  {localizedText(language, "AGROMETEOROLOGICAL AI ANALYSIS", "வானிலை நோய் தொற்று ஆராய்ச்சி")}
+                </span>
+                <h2 style={{ fontSize: "19px", margin: "4px 0 0", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Sparkles size={19} color="#2563eb" />
+                  {localizedText(language, "Gemini AI Weather Research", "Gemini AI வானிலை ஆராய்ச்சி")}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => void analyzeWeather()}
+                disabled={aiGuidanceLoading || weatherLoading}
+              >
+                <Sparkles size={16} />
+                {aiGuidanceLoading
+                  ? localizedText(language, "Analyzing weather…", "வானிலை ஆராய்கிறது…")
+                  : localizedText(language, "Analyze weather with Gemini", "Gemini மூலம் வானிலை ஆராய்க")}
+              </button>
+            </div>
+
+            {aiGuidanceError && <p className="form-error" role="alert" style={{ marginTop: "14px" }}><LocalText source={aiGuidanceError} /></p>}
+
+            {/* Glowing animated loading state */}
+            {aiGuidanceLoading && (
+              <div style={{ padding: "28px", textAlign: "center", background: "#f8fafc", borderRadius: "10px", border: "1px dashed #93c5fd", marginTop: "18px" }}>
+                <div style={{ display: "inline-block", width: "28px", height: "28px", border: "3px solid #bfdbfe", borderTopColor: "#2563eb", borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: "10px" }} />
+                <strong style={{ display: "block", color: "#1e293b", fontSize: "15px" }}>
+                  {localizedText(language, "Gemini AI is analyzing 7-day microclimate & grass age...", "Gemini AI 7 நாள் வானிலை மற்றும் பயிர் வயதை ஆராய்கிறது...")}
+                </strong>
+                <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: "13px" }}>
+                  {localizedText(language, "Screening temperature, relative humidity, rain accumulation, and pathogen vulnerability.", "வெப்பநிலை, ஈரப்பதம், மழை அளவு மற்றும் நோய்க்கிருமி தாக்கத்தை மதிப்பிடுகிறது.")}
                 </p>
               </div>
-            </div>
-          </section>
-        )}
+            )}
 
-        {error && <p className="form-error" role="alert"><LocalText source={error} /></p>}
-        {guidanceCheckMessage && <p className="form-success" role="status"><LocalText source={guidanceCheckMessage} /></p>}
+            {/* Direct Gemini research results shown right below the button */}
+            {aiGuidance && (
+              <div className="ai-weather-guidance" style={{ marginTop: "18px", border: "none", padding: 0 }} aria-live="polite">
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", background: "#f8fafc", padding: "12px 16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                  <div>
+                    <span style={{ fontSize: "12px", color: "#64748b", textTransform: "uppercase", fontWeight: "700", display: "block" }}>
+                      {localizedText(language, "Predicted Risk Level", "கணிக்கப்பட்ட அபாய நிலை")}
+                    </span>
+                    <strong style={{ fontSize: "18px" }}>{weatherRiskLabel(aiGuidance.risk_level, language)}</strong>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <small style={{ color: "#64748b", display: "block" }}>
+                      {localizedText(language, "Grass Age: ", "பயிர் வயது: ")}<strong>{grassAge}</strong>
+                    </small>
+                    <small style={{ color: "#64748b" }}>
+                      Gemini {aiGuidance.model} · {new Date(aiGuidance.weather_observed_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </small>
+                  </div>
+                  <SpeechButton
+                    text={[
+                      aiGuidance.summary,
+                      aiGuidance.risk_reason,
+                      aiGuidance.weather_effect,
+                      `${localizedText(language, "What to do", "என்ன செய்வது")}: ${aiGuidance.actions.join(". ")}`,
+                      aiGuidance.watch_for.length
+                        ? `${localizedText(language, "What to watch for", "என்ன பார்க்க வேண்டும்")}: ${aiGuidance.watch_for.join(". ")}`
+                        : "",
+                      aiGuidance.limitations,
+                    ].filter(Boolean).join(". ")}
+                    lang={language}
+                    label={localizedText(language, "Listen to Gemini explanation", "விளக்கத்தைக் கேளுங்கள்")}
+                  />
+                </div>
 
-        <button
-          type="button"
-          className="primary-button submit-button"
-          disabled={!farmId || loading || !selectedFarm || selectedFarm.latitude === null || selectedFarm.longitude === null}
-          onClick={() => void submit()}
-        >
-          {loading
-            ? riskModelStatus === "experimental_enabled" ? t.checkingRisk : localizedText(language, "Refreshing weather…")
-            : riskModelStatus === "experimental_enabled" ? t.runRisk : localizedText(language, "Refresh weather")}
-          <ArrowRight size={17} />
-        </button>
-      </div>
+                <div style={{ marginTop: "16px" }}>
+                  <h3 style={{ fontSize: "17px", color: "#1e293b", margin: "0 0 8px" }}>{aiGuidance.summary}</h3>
+                  <p style={{ fontSize: "14px", lineHeight: "1.6", color: "#334155", margin: "0 0 12px" }}>{aiGuidance.risk_reason}</p>
+                  <p style={{ fontSize: "13px", lineHeight: "1.6", color: "#64748b", background: "#f1f5f9", padding: "10px 14px", borderRadius: "6px" }}>
+                    <strong>{localizedText(language, "Meteorological Impact:", "வானிலை தாக்கம்:")}</strong> {aiGuidance.weather_effect}
+                  </p>
+                </div>
 
-      {/* Risk Result Card */}
-      {riskResult && (
-        <article className="risk-result-card">
-          <div className="risk-header-row">
-            <div>
-              <span className="eyebrow">{t.leadTimeBadge}</span>
-              <h2 style={{ fontSize: "22px", margin: "4px 0", color: "#1e293b" }}>
-                {diseaseLabel(riskResult.disease_class, language)}: {(riskResult.disease_presence_score * 100).toFixed(0)}% {localizedText(language, "model score (not a diagnosis)", "மாதிரி மதிப்பெண் (நோய் உறுதி அல்ல)")}
-              </h2>
-            </div>
-          </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginTop: "16px" }}>
+                  <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "14px", borderRadius: "8px" }}>
+                    <strong style={{ color: "#166534", fontSize: "13px", display: "block", marginBottom: "6px" }}>
+                      ✓ {localizedText(language, "What to do (Field Actions)", "என்ன செய்ய வேண்டும் (கள நடவடிக்கைகள்)")}
+                    </strong>
+                    <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", color: "#14532d", lineHeight: "1.6" }}>
+                      {aiGuidance.actions.map((action, index) => <li key={`action-${index}`}>{action}</li>)}
+                    </ul>
+                  </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-            <span style={{ fontSize: "13px", color: "#64748b" }}>
-              <LocalText source={riskResult.score_note} />
-            </span>
-            <SpeechButton
-              text={
-                `${localizedText(language, "A model score for", "நோய்க்கான மாதிரி மதிப்பெண்")} ${diseaseLabel(riskResult.disease_class, language)}. ${localizedText(language, "It does not confirm disease or predict the future.", "இது நோய் உறுதியும் எதிர்கால கணிப்பும் அல்ல.")}`
-              }
-              lang={language}
-            />
-          </div>
+                  <div style={{ background: "#fefce8", border: "1px solid #fef08a", padding: "14px", borderRadius: "8px" }}>
+                    <strong style={{ color: "#854d0e", fontSize: "13px", display: "block", marginBottom: "6px" }}>
+                      🔍 {localizedText(language, "What to watch for (Scouting Signs)", "கண்காணிக்க வேண்டிய அறிகுறிகள்")}
+                    </strong>
+                    <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", color: "#713f12", lineHeight: "1.6" }}>
+                      {aiGuidance.watch_for.map((item, index) => <li key={`watch-${index}`}>{item}</li>)}
+                    </ul>
+                  </div>
+                </div>
 
-          <div className="shap-list">
-            <strong style={{ fontSize: "12px", color: "#475569", textTransform: "uppercase" }}>{t.primaryDrivers}</strong>
-            {riskResult.primary_drivers.map((d, i) => (
-              <div key={i} className="shap-item">
-                <span>{riskFeatureLabel(d.feature, language)}: <strong>{d.value ?? localizedText(language, "not recorded", "பதிவில்லை")}</strong></span>
-                <span className={d.shap_value > 0 ? "shap-inc" : "shap-dec"}>
-                  {d.shap_value > 0
-                    ? localizedText(language, "raised the model score", "மதிப்பை உயர்த்தியது")
-                    : localizedText(language, "lowered the model score", "மதிப்பைக் குறைத்தது")}
-                </span>
+                <p className="field-hint" style={{ marginTop: "14px" }}>{aiGuidance.limitations} · {geminiGpsDisclosure[language]}</p>
               </div>
-            ))}
+            )}
+
+            {!aiGuidance && !aiGuidanceLoading && (
+              <p style={{ color: "#64748b", fontSize: "13px", marginTop: "14px", background: "#f8fafc", padding: "14px", borderRadius: "8px" }}>
+                {localizedText(
+                  language,
+                  "Click 'Analyze weather with Gemini' above to generate an in-depth epidemiological screening based on your farm's 7-day microclimatic trends and selected grass age.",
+                  "உங்கள் பண்ணையின் 7 நாள் வானிலை போக்குகள் மற்றும் பயிர் வயதின் அடிப்படையில் விரிவான நோய் அபாய ஆய்வைப் பெற மேலே உள்ள 'Analyze weather with Gemini' பொத்தானைக் கிளிக் செய்யவும்."
+                )}
+              </p>
+            )}
           </div>
 
-          <p className="result-warning" style={{ marginTop: "14px" }}>
-            {localizedText(language, "This is an experimental model result, not a diagnosis. Weather-based disease prediction is currently disabled.", "இந்த முடிவு சோதனை மாதிரியிலிருந்து வருகிறது; நோய் உறுதிப்படுத்தாது. வானிலை நோய் கணிப்பு தற்போது முடக்கப்பட்டுள்ளது.")}
-          </p>
-        </article>
-      )}
+          {/* Card 2: Risk Result Card (Option 2 Result) */}
+          {riskResult && (
+            <article className="risk-result-card" style={{ marginTop: 0 }}>
+              <div className="risk-header-row">
+                <div>
+                  <span className="eyebrow">{t.leadTimeBadge}</span>
+                  <h2 style={{ fontSize: "22px", margin: "4px 0", color: "#1e293b" }}>
+                    {diseaseLabel(riskResult.disease_class, language)}: {(riskResult.disease_presence_score * 100).toFixed(0)}% {localizedText(language, "model score (not a diagnosis)", "மாதிரி மதிப்பெண் (நோய் உறுதி அல்ல)")}
+                  </h2>
+                </div>
+              </div>
 
-      <div className="explain-banner compact" style={{ marginTop: "20px" }}>
-        <CircleHelp />
-        <div>
-          <h3>{localizedText(language, "Weather and leaf photo", "வானிலை மற்றும் இலைப் படம்")}</h3>
-          <p>{localizedText(language, "The photo checks for visible signs. Weather alone cannot confirm disease.", "இலைப் படம் அறிகுறியைத் தேடும். வானிலை மட்டும் நோயை உறுதி செய்யாது.")}</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                <span style={{ fontSize: "13px", color: "#64748b" }}>
+                  <LocalText source={riskResult.score_note} />
+                </span>
+                <SpeechButton
+                  text={
+                    `${localizedText(language, "A model score for", "நோய்க்கான மாதிரி மதிப்பெண்")} ${diseaseLabel(riskResult.disease_class, language)}. ${localizedText(language, "It does not confirm disease or predict the future.", "இது நோய் உறுதியும் எதிர்கால கணிப்பும் அல்ல.")}`
+                  }
+                  lang={language}
+                />
+              </div>
+
+              {riskResult.age_ai_guidance && (
+                <div className="model-notice" style={{ marginBottom: "14px", background: "#f0fdf4", borderColor: "#86efac", color: "#14532d" }}>
+                  <ShieldCheck />
+                  <div>
+                    <strong>{localizedText(language, "Grass Age & Physiological Advisory (Gemini AI)", "பயிர் வயது மற்றும் உடலியல் வழிகாட்டல் (Gemini AI)")}</strong>
+                    <p style={{ margin: "4px 0", fontSize: "13px", lineHeight: "1.5" }}>{riskResult.age_ai_guidance}</p>
+                    <small style={{ color: "#166534", fontWeight: "600" }}>
+                      {localizedText(language, "Evaluated Cane Age: ", "மதிப்பிடப்பட்ட பயிர் வயது: ")}{riskResult.grass_age}
+                    </small>
+                  </div>
+                </div>
+              )}
+
+              <div className="shap-list">
+                <strong style={{ fontSize: "12px", color: "#475569", textTransform: "uppercase" }}>{t.primaryDrivers}</strong>
+                {riskResult.primary_drivers.map((d, i) => (
+                  <div key={i} className="shap-item">
+                    <span>{riskFeatureLabel(d.feature, language)}: <strong>{d.value ?? localizedText(language, "not recorded", "பதிவில்லை")}</strong></span>
+                    <span className={d.shap_value > 0 ? "shap-inc" : "shap-dec"}>
+                      {d.shap_value > 0
+                        ? localizedText(language, "raised the model score", "மதிப்பை உயர்த்தியது")
+                        : localizedText(language, "lowered the model score", "மதிப்பைக் குறைத்தது")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <p className="result-warning" style={{ marginTop: "14px" }}>
+                {localizedText(language, "This is an experimental model result, not a diagnosis. Weather-based disease prediction is currently disabled.", "இந்த முடிவு சோதனை மாதிரியிலிருந்து வருகிறது; நோய் உறுதிப்படுத்தாது. வானிலை நோய் கணிப்பு தற்போது முடக்கப்பட்டுள்ளது.")}
+              </p>
+            </article>
+          )}
+
+          <div className="explain-banner compact" style={{ maxWidth: "100%", marginTop: 0 }}>
+            <CircleHelp />
+            <div>
+              <h3>{localizedText(language, "Weather and leaf photo", "வானிலை மற்றும் இலைப் படம்")}</h3>
+              <p>{localizedText(language, "The photo checks for visible signs. Weather alone cannot confirm disease.", "இலைப் படம் அறிகுறியைத் தேடும். வானிலை மட்டும் நோயை உறுதி செய்யாது.")}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
