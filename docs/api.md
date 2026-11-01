@@ -37,6 +37,8 @@ signals and must not guide farm decisions. Wilt is omitted from fusion because
 the current image classifier has no Wilt class. YOLO is not run because no
 bounding-box dataset or trained detector artifact is available.
 
+The demonstration route is disabled in production.
+
 `POST /weather/guidance` accepts `{ "farm_id": "...", "disease_class": "RedRot" }`
 and an optional supported `language_code`. It requires an authenticated user,
 a farm with GPS coordinates, an available current or cached weather observation,

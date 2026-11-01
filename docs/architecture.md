@@ -12,10 +12,11 @@ flowchart LR
 ```
 
 The environmental and image modules are separate for real inference. The
-development-only `/demo/fusion/predict` endpoint combines the EfficientNetV2
-image scores with explicitly synthetic XGBoost scores for demonstration; its
-late-fusion ranking, SHAP values, and ALE plot are not disease predictions and
-are never saved to prediction history. It is disabled in production. YOLO is
+development-only `/demo/environmental-risk` endpoint applies explicitly
+synthetic XGBoost models to farm weather inputs, and `/demo/fusion/predict`
+combines the resulting demo scores with EfficientNetV2 image scores. Their
+outputs, SHAP values, and ALE plots are not disease predictions and are never
+saved to prediction history. Both routes are disabled in production. YOLO is
 not used because no suitable bounding-box training data or detector artifact is
 available, and the evaluated crop pipeline was rejected for field inference.
 Wilt is also omitted from the fused ranking because the image classifier has no

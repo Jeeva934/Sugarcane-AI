@@ -1268,11 +1268,10 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [guidanceCheckMessage, setGuidanceCheckMessage] = useState("");
   const [aiGuidance, setAiGuidance] = useState<WeatherGuidance | null>(null);
-  const [aiGuidanceLanguage, setAiGuidanceLanguage] = useState<Language | null>(null);
-  const [aiGuidanceRequestLanguage, setAiGuidanceRequestLanguage] = useState<Language | null>(null);
   const [aiGuidanceLoading, setAiGuidanceLoading] = useState(false);
   const [aiGuidanceError, setAiGuidanceError] = useState("");
   const aiGuidanceRequestId = useRef(0);
+  const autoGuidanceRequestKey = useRef("");
 
   const selectedFarm = farms.find((f) => f.id === farmId);
 
@@ -1333,7 +1332,7 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
         });
         setWeather(refreshed);
         setGuidanceCheckMessage(refreshed.observation
-          ? `${localizedText(language, refreshed.cached ? "Latest saved weather loaded" : "Weather refreshed")} for ${selectedFarm.name}. ${localizedText(language, "Use the Analyze weather with Gemini button to get tips from these readings.")}`
+          ? `${localizedText(language, refreshed.cached ? "Latest saved weather loaded" : "Weather refreshed")} for ${selectedFarm.name}. ${localizedText(language, "Gemini guidance updates automatically when the farm, disease, crop stage, or language changes.")}`
           : translate(language, refreshed.message ?? "Weather is unavailable, so no disease prediction or weather-based guidance check was generated."));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Could not refresh farm weather.");
@@ -1361,8 +1360,6 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
   function clearAiGuidance() {
     aiGuidanceRequestId.current += 1;
     setAiGuidance(null);
-    setAiGuidanceLanguage(null);
-    setAiGuidanceRequestLanguage(null);
     setAiGuidanceLoading(false);
     setAiGuidanceError("");
   }
@@ -1379,8 +1376,6 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
     const requestId = ++aiGuidanceRequestId.current;
     const requestLanguage = language;
     setAiGuidance(null);
-    setAiGuidanceLanguage(null);
-    setAiGuidanceRequestLanguage(requestLanguage);
     setAiGuidanceError("");
     setAiGuidanceLoading(true);
     try {
@@ -1390,7 +1385,6 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
       });
       if (requestId === aiGuidanceRequestId.current) {
         setAiGuidance(result);
-        setAiGuidanceLanguage(requestLanguage);
       }
     } catch (e) {
       if (requestId === aiGuidanceRequestId.current) {
@@ -1405,12 +1399,34 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
 
   useEffect(() => {
     if (
-      (aiGuidance && aiGuidanceLanguage !== language)
-      || (aiGuidanceLoading && aiGuidanceRequestLanguage !== language)
+      !selectedFarm
+      || selectedFarm.latitude === null
+      || selectedFarm.longitude === null
+      || !targetDisease
+      || !grassAge
     ) {
-      void analyzeWeather();
+      autoGuidanceRequestKey.current = "";
+      return;
     }
-  }, [aiGuidance, aiGuidanceLanguage, aiGuidanceLoading, aiGuidanceRequestLanguage, language]);
+
+    const requestKey = `${selectedFarm.id}|${targetDisease}|${grassAge}|${language}`;
+    if (requestKey === autoGuidanceRequestKey.current || weatherLoading) return;
+
+    clearAiGuidance();
+    const timer = window.setTimeout(() => {
+      autoGuidanceRequestKey.current = requestKey;
+      void analyzeWeather();
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [
+    selectedFarm?.id,
+    selectedFarm?.latitude,
+    selectedFarm?.longitude,
+    targetDisease,
+    grassAge,
+    language,
+    weatherLoading,
+  ]);
 
   return (
     <div className="page-enter">
@@ -1577,38 +1593,14 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
 
         {/* RIGHT COLUMN: Scrollable Content & Gemini Research */}
         <div className="risk-right-scrollable">
-          {/* Card 1: Gemini AI Weather Research */}
-          <div className="gemini-research-card">
-            <div className="gemini-action-bar">
-              <div>
-                <span className="eyebrow" style={{ color: "#2563eb" }}>
-                  {localizedText(language, "AGROMETEOROLOGICAL AI ANALYSIS", "வானிலை நோய் தொற்று ஆராய்ச்சி")}
-                </span>
-                <h2 style={{ fontSize: "19px", margin: "4px 0 0", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Sparkles size={19} color="#2563eb" />
-                  {localizedText(language, "Gemini AI Weather Research", "Gemini AI வானிலை ஆராய்ச்சி")}
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => void analyzeWeather()}
-                disabled={aiGuidanceLoading || weatherLoading}
-              >
-                <Sparkles size={16} />
-                {aiGuidanceLoading
-                  ? localizedText(language, "Analyzing weather…", "வானிலை ஆராய்கிறது…")
-                  : localizedText(language, "Analyze weather with Gemini", "Gemini மூலம் வானிலை ஆராய்க")}
-              </button>
-            </div>
-
-            {aiGuidanceError && <p className="form-error" role="alert" style={{ marginTop: "14px" }}><LocalText source={aiGuidanceError} /></p>}
-
-            {/* Glowing animated loading state */}
+          {(aiGuidance || aiGuidanceLoading || aiGuidanceError) && (
+            <section className="gemini-research-card" aria-live="polite">
+              {aiGuidanceError && <p className="form-error" role="alert"><LocalText source={aiGuidanceError} /></p>}
             {aiGuidanceLoading && (
-              <div style={{ padding: "28px", textAlign: "center", background: "#f8fafc", borderRadius: "10px", border: "1px dashed #93c5fd", marginTop: "18px" }}>
+              <div style={{ padding: "18px", textAlign: "center", background: "#f8fafc", borderRadius: "10px", border: "1px dashed #93c5fd" }}>
                 <div style={{ display: "inline-block", width: "28px", height: "28px", border: "3px solid #bfdbfe", borderTopColor: "#2563eb", borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: "10px" }} />
                 <strong style={{ display: "block", color: "#1e293b", fontSize: "15px" }}>
-                  {localizedText(language, "Gemini AI is analyzing 7-day microclimate & grass age...", "Gemini AI 7 நாள் வானிலை மற்றும் பயிர் வயதை ஆராய்கிறது...")}
+                  {localizedText(language, "AI is analyzing the selected farm, disease and crop stage…", "தேர்ந்தெடுத்த பண்ணை, நோய் மற்றும் பயிர் நிலையை AI ஆராய்கிறது…")}
                 </strong>
                 <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: "13px" }}>
                   {localizedText(language, "Screening temperature, relative humidity, rain accumulation, and pathogen vulnerability.", "வெப்பநிலை, ஈரப்பதம், மழை அளவு மற்றும் நோய்க்கிருமி தாக்கத்தை மதிப்பிடுகிறது.")}
@@ -1616,7 +1608,6 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
               </div>
             )}
 
-            {/* Direct Gemini research results shown right below the button */}
             {aiGuidance && (
               <div className="ai-weather-guidance" style={{ marginTop: "18px", border: "none", padding: 0 }} aria-live="polite">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", background: "#f8fafc", padding: "12px 16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
@@ -1629,9 +1620,6 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
                   <div style={{ textAlign: "right" }}>
                     <small style={{ color: "#64748b", display: "block" }}>
                       {localizedText(language, "Grass Age: ", "பயிர் வயது: ")}<strong>{grassAge}</strong>
-                    </small>
-                    <small style={{ color: "#64748b" }}>
-                      Gemini {aiGuidance.model} · {new Date(aiGuidance.weather_observed_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </small>
                   </div>
                   <SpeechButton
@@ -1646,7 +1634,7 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
                       aiGuidance.limitations,
                     ].filter(Boolean).join(". ")}
                     lang={language}
-                    label={localizedText(language, "Listen to Gemini explanation", "விளக்கத்தைக் கேளுங்கள்")}
+                    label={localizedText(language, "Listen to AI explanation", "விளக்கத்தைக் கேளுங்கள்")}
                   />
                 </div>
 
@@ -1689,16 +1677,8 @@ function RiskAssessment({ farms, t, language }: { farms: Farm[]; t: typeof copy.
               </div>
             )}
 
-            {!aiGuidance && !aiGuidanceLoading && (
-              <p style={{ color: "#64748b", fontSize: "13px", marginTop: "14px", background: "#f8fafc", padding: "14px", borderRadius: "8px" }}>
-                {localizedText(
-                  language,
-                  "Click 'Analyze weather with Gemini' above to generate an in-depth epidemiological screening based on your farm's 7-day microclimatic trends and selected grass age.",
-                  "உங்கள் பண்ணையின் 7 நாள் வானிலை போக்குகள் மற்றும் பயிர் வயதின் அடிப்படையில் விரிவான நோய் அபாய ஆய்வைப் பெற மேலே உள்ள 'Analyze weather with Gemini' பொத்தானைக் கிளிக் செய்யவும்."
-                )}
-              </p>
-            )}
-          </div>
+            </section>
+          )}
 
           {/* Card 2: Risk Result Card (Option 2 Result) */}
           {riskResult && (

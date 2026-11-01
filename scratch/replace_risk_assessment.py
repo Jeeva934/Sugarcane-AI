@@ -323,7 +323,7 @@ new_func = '''function RiskAssessment({ farms, t, language }: { farms: Farm[]; t
                 </span>
                 <h2 style={{ fontSize: "19px", margin: "4px 0 0", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
                   <Sparkles size={19} color="#2563eb" />
-                  {localizedText(language, "Gemini AI Weather Research", "Gemini AI வானிலை ஆராய்ச்சி")}
+                  {localizedText(language, "AI Weather Research", " AI வானிலை ஆராய்ச்சி")}
                 </h2>
               </div>
               <button
@@ -370,7 +370,7 @@ new_func = '''function RiskAssessment({ farms, t, language }: { farms: Farm[]; t
                       aiGuidance.limitations,
                     ].filter(Boolean).join(". ")}
                     lang={language}
-                    label={localizedText(language, "Listen to Gemini explanation", "விளக்கத்தைக் கேளுங்கள்")}
+                    label={localizedText(language, "Listen to AI explanation", "விளக்கத்தைக் கேளுங்கள்")}
                   />
                 </div>
 

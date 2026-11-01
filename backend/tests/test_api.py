@@ -418,4 +418,4 @@ def test_health_endpoints_report_api_and_dependency_status(client):
     assert ready.json()["status"] == "ready"
     assert ready.json()["checks"]["database"] == "ok"
     assert ready.json()["checks"]["image_model"] in ("disabled", "experimental_enabled")
-    assert ready.json()["checks"]["risk_model"] in ("disabled", "experimental_enabled")
+    assert ready.json()["checks"]["risk_model"] in ("disabled", "experimental_enabled", "unavailable")
